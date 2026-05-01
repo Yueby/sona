@@ -25,7 +25,6 @@
   color: #c8aa6e;
 }
 
-/* ---- 模式过滤下拉框 ---- */
 .smh-filter {
   position: relative;
   margin-left: 0;
@@ -132,23 +131,26 @@
   opacity: 0.6;
 }
 
-/* ==================== 单局横条 ==================== */
-
 .smh-row {
   display: flex;
   align-items: center;
   justify-content: space-between;
   padding: 8px 16px;
   border-bottom: 1px solid rgba(255, 255, 255, 0.04);
-  transition: background 0.15s;
+  transition: background 0.15s, border-color 0.15s;
   border-left: 3px solid transparent;
+  cursor: pointer;
+  user-select: none;
 }
 
-.smh-row:hover { background: rgba(255, 255, 255, 0.03); }
+.smh-row:hover,
+.smh-row:focus-visible {
+  background: rgba(255, 255, 255, 0.045);
+  outline: none;
+}
+
 .smh-row.smh-win { border-left-color: #0088cc; }
 .smh-row.smh-loss { border-left-color: #cc3333; }
-
-/* ---- 左侧 ---- */
 
 .smh-row-left {
   display: flex;
@@ -190,7 +192,7 @@
   background: #010a13;
   border: 1.5px solid rgba(160, 155, 140, 0.5);
   color: #f0e6d2;
-  font-size: 10px;
+  font-size: 11px;
   font-weight: 700;
   width: 20px;
   height: 20px;
@@ -251,8 +253,6 @@
   height: 16px;
   opacity: 0.75;
 }
-
-/* ---- 中间 ---- */
 
 .smh-row-center {
   display: flex;
@@ -316,7 +316,6 @@
   display: inline-block;
   width: 16px;
   height: 16px;
-  /* -webkit-mask-image 在 JSX 内联样式里设置，避免 Vite CSS url() 重写 */
   -webkit-mask-size: 100% 700%;
   mask-size: 100% 700%;
   -webkit-mask-repeat: no-repeat;
@@ -367,8 +366,6 @@
   font-size: 12px;
 }
 
-/* ---- 右侧 ---- */
-
 .smh-row-right {
   display: flex;
   flex-direction: column;
@@ -376,7 +373,7 @@
   width: 80px;
   flex-shrink: 0;
   gap: 2px;
-  color:#a09b8c
+  color: #a09b8c;
 }
 
 .smh-mapname {
@@ -418,7 +415,6 @@
   display: inline-block;
   width: 16px;
   height: 16px;
-  /* -webkit-mask-image 在 JSX 内联样式里设置，避免 Vite CSS url() 重写 */
   -webkit-mask-size: contain;
   mask-size: contain;
   -webkit-mask-repeat: no-repeat;

@@ -669,7 +669,7 @@ export interface MatchGame {
   gameDuration: number
   gameId: number
   gameMode: string
-  gameModeMutators: unknown[]
+  gameModeMutators: string[]
   gameType: string
   gameVersion: string
   mapId: number
@@ -679,6 +679,23 @@ export interface MatchGame {
   queueId: number
   seasonId: number
   teams: MatchTeam[]
+}
+
+/** 单局对局详情 — GET /lol-match-history/v1/games/{gameId} */
+export type MatchDetail = MatchGame
+
+/** 参与者时间线数据 */
+export interface ParticipantTimeline {
+  creepsPerMinDeltas: Record<string, number>
+  csDiffPerMinDeltas: Record<string, number>
+  damageTakenDiffPerMinDeltas: Record<string, number>
+  damageTakenPerMinDeltas: Record<string, number>
+  goldPerMinDeltas: Record<string, number>
+  lane: string
+  participantId: number
+  role: string
+  xpDiffPerMinDeltas: Record<string, number>
+  xpPerMinDeltas: Record<string, number>
 }
 
 /** 对局队伍数据 */
@@ -728,7 +745,7 @@ export interface Participant {
   spell2Id: number
   stats: ParticipantStats
   teamId: number
-  timeline: Record<string, unknown>
+  timeline: ParticipantTimeline
 }
 
 /** 参与者统计数据 */

@@ -1,5 +1,6 @@
-import { useState, useEffect, useRef, useCallback } from 'react'
+import { useState, useEffect, useRef, useCallback, type MouseEvent as ReactMouseEvent } from 'react'
 import { Modal } from '@/components/ui/Modal'
+import { MatchDetailModal } from '@/components/ui/MatchDetailModal'
 import { lcu, queueIdToTag } from '@/lib/lcu'
 import { getChampIcon, getItemIcon, getSpellIcon, getPerkIcon, getPerkStyleIcon, getQueueName, getMapName, getPlayableQueues } from '@/lib/assets'
 import type { SgpGameSummaryLol, SgpParticipantLol } from '@/types/sgp'
@@ -97,12 +98,13 @@ function parseSgpMatch(game: SgpGameSummaryLol, puuid: string): MatchRowData | n
 
 // ==================== 组件 ====================
 
-function MatchRow({ match }: { match: MatchRowData }) {
+function MatchRow({ match, onOpenDetail }: { match: MatchRowData; onOpenDetail: (gameId: number) => void }) {
   const statusClass = match.win ? 'smh-win' : 'smh-loss'
   const statusText = match.win ? '胜利' : '失败'
   const [copied, setCopied] = useState(false)
 
-  const handleCopyGameId = () => {
+  const handleCopyGameId = (e: ReactMouseEvent) => {
+    e.stopPropagation()
     navigator.clipboard.writeText(String(match.gameId)).then(() => {
       setCopied(true)
       setTimeout(() => setCopied(false), 1500)
@@ -110,7 +112,19 @@ function MatchRow({ match }: { match: MatchRowData }) {
   }
 
   return (
-    <div className={`smh-row ${statusClass}`}>
+    <div
+      className={`smh-row ${statusClass}`}
+      role="button"
+      tabIndex={0}
+      onClick={() => onOpenDetail(match.gameId)}
+      onKeyDown={(e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault()
+          onOpenDetail(match.gameId)
+        }
+      }}
+      title="点击查看单局详情"
+    >
       <div className="smh-row-left">
         <div className="smh-champion">
           <div className="smh-champion-mask">
@@ -202,6 +216,7 @@ export function MatchHistoryModal({ open, onClose, puuid, playerName, queueId: d
   const [hasMore, setHasMore] = useState(true)
   const [filterQueueId, setFilterQueueId] = useState<number>(defaultQueueId ?? 0)
   const [filterOpen, setFilterOpen] = useState(false)
+  const [detailGameId, setDetailGameId] = useState<number | null>(null)
   const loadedKey = useRef('')
   const listRef = useRef<HTMLDivElement>(null)
   const filterRef = useRef<HTMLDivElement>(null)
@@ -383,7 +398,7 @@ export function MatchHistoryModal({ open, onClose, puuid, playerName, queueId: d
             <div className="smh-empty">{filterQueueId > 0 ? '该模式暂无战绩，试试切换模式' : '暂无战绩'}</div>
           )}
           {matches.map((m) => (
-            <MatchRow key={m.gameId} match={m} />
+            <MatchRow key={m.gameId} match={m} onOpenDetail={setDetailGameId} />
           ))}
           {loadingMore && <div className="smh-empty">加载更多...</div>}
           {!loading && !error && matches.length > 0 && (
@@ -392,6 +407,12 @@ export function MatchHistoryModal({ open, onClose, puuid, playerName, queueId: d
             </div>
           )}
         </div>
+        <MatchDetailModal
+          open={detailGameId != null}
+          onClose={() => setDetailGameId(null)}
+          gameId={detailGameId}
+          focusPuuid={puuid}
+        />
       </div>
     </Modal>
   )

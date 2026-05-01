@@ -28,6 +28,7 @@ import type {
   QueueId,
   LCUEventMessage,
   MatchHistoryResponse,
+  MatchDetail,
   ChatFriend,
   SpectatorLaunchPayload,
   SummonerSpellData,
@@ -37,7 +38,7 @@ import type {
 import type { SgpEntitlementsToken } from '@/types/sgp'
 
 // Re-export types for convenience
-export type { SummonerInfo, LobbyConfig, Lobby, GameflowPhase, GameflowSession, LCUEventMessage, ChatConversation, ChatMessage, ChatMe, Availability, SendChatMessageBody, ReadyCheck, ChampSelectSession, ChampSelectPlayerDetail, MatchHistoryResponse, ChatFriend, SpectatorLaunchPayload }
+export type { SummonerInfo, LobbyConfig, Lobby, GameflowPhase, GameflowSession, LCUEventMessage, ChatConversation, ChatMessage, ChatMe, Availability, SendChatMessageBody, ReadyCheck, ChampSelectSession, ChampSelectPlayerDetail, MatchHistoryResponse, MatchDetail, ChatFriend, SpectatorLaunchPayload }
 export type { SgpEntitlementsToken, SgpMatchHistoryLol } from '@/types/sgp'
 export { SGP_SERVERS, TENCENT_MATCH_HISTORY_INTEROP, TENCENT_SERVER_NAMES, queueIdToTag } from '@/types/sgp'
 
@@ -757,8 +758,8 @@ class LCUManager {
    * 获取单局对局详情
    * @param gameId 对局 ID
    */
-  getMatchDetail(gameId: number): Promise<unknown> {
-    return get(`/lol-match-history/v1/games/${gameId}`)
+  getMatchDetail(gameId: number): Promise<MatchDetail> {
+    return get<MatchDetail>(`/lol-match-history/v1/games/${gameId}`)
   }
 
   /**
