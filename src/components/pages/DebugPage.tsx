@@ -48,6 +48,58 @@ export function DebugPage() {
     }
   }
 
+  const testOpggConnectivity = async () => {
+    const url = 'https://lol-api-champion.op.gg/api/global/champions/ranked/versions'
+    const startedAt = performance.now()
+    const controller = new AbortController()
+    const timer = window.setTimeout(() => controller.abort(), 10000)
+
+    try {
+      const resp = await fetch(url, {
+        method: 'GET',
+        mode: 'cors',
+        headers: {
+          Accept: 'application/json',
+        },
+        signal: controller.signal,
+      })
+      const elapsedMs = Math.round(performance.now() - startedAt)
+      const contentType = resp.headers.get('content-type') ?? ''
+      const bodyText = await resp.text()
+      let body: unknown = bodyText
+
+      try {
+        body = bodyText ? JSON.parse(bodyText) : null
+      } catch {
+        body = bodyText.slice(0, 500)
+      }
+
+      return {
+        url,
+        ok: resp.ok,
+        status: resp.status,
+        statusText: resp.statusText,
+        contentType,
+        elapsedMs,
+        dataPreview: Array.isArray(body) ? body.slice(0, 8) : body,
+      }
+    } catch (err) {
+      const elapsedMs = Math.round(performance.now() - startedAt)
+      const message = err instanceof Error ? err.message : String(err)
+      return {
+        url,
+        ok: false,
+        elapsedMs,
+        error: message,
+        hint: message.includes('abort')
+          ? '请求超时。可能是网络不可达，或客户端环境阻止了外部请求。'
+          : '如果这里是 Failed to fetch / NetworkError，且 DevTools Console 有 CORS 字样，说明 Pengu 注入页不能直接请求 OP.GG 接口。',
+      }
+    } finally {
+      window.clearTimeout(timer)
+    }
+  }
+
   return (
     <div className="sona-settings">
       <h2 className="sona-settings-title">调试面板</h2>
@@ -251,6 +303,17 @@ export function DebugPage() {
             return result
           })}>
             SGP 直连: 自己战绩
+          </SonaButton>
+        </div>
+      </SettingGroup>
+
+      <SettingGroup title="OP.GG API 连通性">
+        <p className="sona-subtitle">
+          使用 Akari 同款数据源测试浏览器环境能否直连 OP.GG Champion API。
+        </p>
+        <div className="sona-debug-actions">
+          <SonaButton variant="primary" onClick={() => runAndLog('OP.GG 版本接口连通性', testOpggConnectivity)}>
+            测试 OP.GG API
           </SonaButton>
         </div>
       </SettingGroup>
