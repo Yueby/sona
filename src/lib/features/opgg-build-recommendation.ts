@@ -234,6 +234,10 @@ function tryHijackAbilityPreviewPanel(): boolean {
       event.stopPropagation()
       event.stopImmediatePropagation()
       event.preventDefault()
+      if (document.getElementById(PANEL_ID)) {
+        closePanel()
+        return
+      }
       openRecommendationPanel(target)
     }
 
