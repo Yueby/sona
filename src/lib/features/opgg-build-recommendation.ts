@@ -441,8 +441,8 @@ async function openRecommendationPanel(anchor: HTMLElement) {
 
   const view = document.createElement('div')
   view.style.cssText = [
-    'width:560px',
-    'max-width:calc(100vw - 40px)',
+    'width:920px',
+    'max-width:calc(100vw - 56px)',
     'background:#1a1c21',
     'direction:ltr',
     'color:#a09b8c',
@@ -536,14 +536,13 @@ function renderRecommendationPanelContent(
           ${renderSummaryChips(recommendation?.summary ?? [])}
         </div>
       </div>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
-        ${renderItemSection('出门装', recommendation?.starterItems, 2)}
-        ${renderSpellSection('召唤师技能', recommendation?.summonerSpells, 2)}
+      <div style="display:grid;grid-template-columns:1.15fr 1.25fr .9fr;gap:12px;align-items:stretch;">
         ${renderItemSection('核心装备', recommendation?.coreItems, 3)}
-        ${renderItemSection('鞋子', recommendation?.boots, 2)}
         ${renderRuneSection('符文推荐', recommendation?.runePages)}
-        ${renderItemSection(recommendation?.mode === 'arena' ? '棱彩装备' : '后期装备', recommendation?.mode === 'arena' ? recommendation?.prismItems : recommendation?.lastItems, 4)}
-        ${isKiwiMode(context) || recommendation?.mode === 'arena' ? renderAugmentSection('海克斯推荐', recommendation?.augments) : ''}
+        ${renderSpellSection('召唤师技能', recommendation?.summonerSpells, 2)}
+        ${(isKiwiMode(context) || recommendation?.mode === 'arena')
+    ? renderAugmentSection('海克斯推荐', recommendation?.augments)
+    : ''}
       </div>
       ${isLoading ? renderMessage('正在后台加载 OP.GG 推荐数据，完成后会自动刷新。', false) : ''}
       ${loadError ? renderMessage(`OP.GG 请求失败：${loadError}`, true) : ''}
@@ -559,7 +558,7 @@ function renderSummaryChips(values: string[]): string {
   `).join('')
 }
 
-function renderSection(title: string, content: string, minHeight = 92): string {
+function renderSection(title: string, content: string, minHeight = 136): string {
   return `
     <div style="min-height:${minHeight}px;padding:12px;background:#010a1399;border:1px solid #3c2e16;">
       <div style="color:#c8aa6e;font-size:12px;font-weight:700;letter-spacing:1px;">${escapeHtml(title)}</div>
@@ -569,11 +568,11 @@ function renderSection(title: string, content: string, minHeight = 92): string {
 }
 
 function renderItemSection(title: string, builds: OpggItemBuild[] | undefined, itemLimit: number): string {
-  const content = builds?.slice(0, 3).map((build, index) => `
-    <div style="display:flex;align-items:center;gap:7px;margin-top:9px;">
-      <div style="width:18px;color:#785a28;font-size:11px;">#${index + 1}</div>
-      <div style="display:flex;gap:3px;min-width:0;">
-        ${build.ids.slice(0, itemLimit).map((id) => renderIcon(getItemIcon(id), getItemName(id), 24)).join('')}
+  const content = builds?.slice(0, 4).map((build, index) => `
+    <div style="display:grid;grid-template-columns:20px 1fr auto;align-items:center;gap:8px;margin-top:11px;">
+      <div style="color:#785a28;font-size:11px;">#${index + 1}</div>
+      <div style="display:flex;gap:5px;min-width:0;">
+        ${build.ids.slice(0, itemLimit).map((id) => renderIcon(getItemIcon(id), getItemName(id), 28)).join('')}
       </div>
       <div style="margin-left:auto;color:#7e7e7e;font-size:11px;white-space:nowrap;">${formatPercent(build.pick_rate)}</div>
     </div>
@@ -584,10 +583,10 @@ function renderItemSection(title: string, builds: OpggItemBuild[] | undefined, i
 
 function renderSpellSection(title: string, builds: OpggItemBuild[] | undefined, limit: number): string {
   const content = builds?.slice(0, limit).map((build, index) => `
-    <div style="display:flex;align-items:center;gap:7px;margin-top:9px;">
-      <div style="width:18px;color:#785a28;font-size:11px;">#${index + 1}</div>
-      <div style="display:flex;gap:3px;">
-        ${build.ids.map((id) => renderIcon(getSpellIcon(id), getSpellName(id), 24)).join('')}
+    <div style="display:grid;grid-template-columns:20px 1fr auto;align-items:center;gap:8px;margin-top:14px;">
+      <div style="color:#785a28;font-size:11px;">#${index + 1}</div>
+      <div style="display:flex;gap:6px;">
+        ${build.ids.map((id) => renderIcon(getSpellIcon(id), getSpellName(id), 32)).join('')}
       </div>
       <div style="margin-left:auto;color:#7e7e7e;font-size:11px;">${formatPercent(build.pick_rate)}</div>
     </div>
@@ -598,28 +597,32 @@ function renderSpellSection(title: string, builds: OpggItemBuild[] | undefined, 
 
 function renderRuneSection(title: string, runes: OpggRuneBuild[] | undefined): string {
   const content = runes?.slice(0, 2).map((rune, index) => `
-    <div style="display:flex;align-items:center;gap:7px;margin-top:9px;">
-      <div style="width:18px;color:#785a28;font-size:11px;">#${index + 1}</div>
-      ${renderIcon(getPerkStyleIcon(rune.primary_page_id), getPerkStyleName(rune.primary_page_id), 22)}
-      ${rune.primary_rune_ids.slice(0, 4).map((id) => renderIcon(getPerkIcon(id), getPerkName(id), 22)).join('')}
-      ${renderIcon(getPerkStyleIcon(rune.secondary_page_id), getPerkStyleName(rune.secondary_page_id), 22)}
+    <div style="display:grid;grid-template-columns:20px 1fr auto;align-items:center;gap:8px;margin-top:13px;">
+      <div style="color:#785a28;font-size:11px;">#${index + 1}</div>
+      <div style="display:flex;align-items:center;gap:5px;min-width:0;">
+        ${renderIcon(getPerkStyleIcon(rune.primary_page_id), getPerkStyleName(rune.primary_page_id), 24)}
+        ${rune.primary_rune_ids.slice(0, 4).map((id) => renderIcon(getPerkIcon(id), getPerkName(id), 24)).join('')}
+        <span style="width:1px;height:22px;background:#3c2e16;margin:0 2px;"></span>
+        ${renderIcon(getPerkStyleIcon(rune.secondary_page_id), getPerkStyleName(rune.secondary_page_id), 24)}
+        ${rune.secondary_rune_ids.slice(0, 2).map((id) => renderIcon(getPerkIcon(id), getPerkName(id), 24)).join('')}
+      </div>
       <div style="margin-left:auto;color:#7e7e7e;font-size:11px;white-space:nowrap;">${formatPercent(rune.pick_rate)}</div>
     </div>
   `).join('')
 
-  return renderSection(title, content ?? '', 106)
+  return renderSection(title, content ?? '')
 }
 
 function renderAugmentSection(title: string, groups: BuildRecommendation['augments'] | undefined): string {
   const content = groups?.map((group) => `
     <div style="margin-top:10px;">
       <div style="margin-bottom:5px;color:#785a28;font-size:11px;">${escapeHtml(getAugmentRarityLabel(group.rarity))}</div>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;">
+      <div style="display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;">
         ${group.items.map((augment) => {
     const info = getAugmentInfo(augment.id)
     return `
-          <div style="display:flex;align-items:center;gap:6px;min-width:0;">
-            ${renderIcon(info?.iconPath ?? '', info?.name ?? String(augment.id), 24, getAugmentBorder(info?.rarity))}
+          <div style="display:flex;align-items:center;gap:7px;min-width:0;padding:6px;background:#1e232866;border:1px solid rgba(200,170,110,0.12);">
+            ${renderIcon(info?.iconPath ?? '', info?.name ?? String(augment.id), 28, getAugmentBorder(info?.rarity))}
             <div style="min-width:0;">
               <div style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:#f0e6d2;font-size:11px;">${escapeHtml(info?.name ?? String(augment.id))}</div>
               <div style="color:#7e7e7e;font-size:10px;">登场 ${formatPercent(augment.pickRate)} · 均排 ${formatPlace(augment.averagePlace)}</div>
@@ -631,7 +634,7 @@ function renderAugmentSection(title: string, groups: BuildRecommendation['augmen
     </div>
   `).join('')
 
-  return `<div style="grid-column:1 / -1;">${renderSection(title, content ?? '', 120)}</div>`
+  return `<div style="grid-column:1 / -1;">${renderSection(title, content ?? '', 164)}</div>`
 }
 
 function renderMessage(message: string, isWarning: boolean): string {

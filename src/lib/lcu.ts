@@ -35,6 +35,7 @@ import type {
   ChampionSummaryData,
   GameQueue,
 } from '@/types/lcu'
+import { SGP_SERVERS } from '@/types/sgp'
 import type { SgpEntitlementsToken } from '@/types/sgp'
 
 // Re-export types for convenience
@@ -117,7 +118,6 @@ function del<T = unknown>(endpoint: string): Promise<T> {
 const PLATFORM_ID_TO_SGP_KEY: Record<string, string> = {
   // 外服 platformId 含数字后缀但 SGP_SERVERS key 不含
   EUW1: 'EUW',
-  EUN1: 'EUN1', // 不在 SGP_SERVERS 中，但保留映射
   RU1: 'RU',
   // 命令行 --region 可能不含数字但 SGP_SERVERS key 含数字
   NA: 'NA1',
@@ -136,6 +136,12 @@ const PLATFORM_ID_TO_SGP_KEY: Record<string, string> = {
   VN2: 'VN2',
   TH2: 'TH2',
   PBE: 'PBE',
+}
+
+function normalizeSgpServerKey(rawCode: string): string {
+  const code = rawCode.toUpperCase()
+  const mapped = PLATFORM_ID_TO_SGP_KEY[code] ?? code
+  return SGP_SERVERS[mapped] ? mapped : ''
 }
 
 /** 国服 platformId 集合（需要加 TENCENT_ 前缀） */
@@ -807,9 +813,10 @@ class LCUManager {
    * 从 Entitlements Token 的 issuer 推断当前 SGP 服务器 ID
    *
    * 解析策略（多源 fallback）：
-   * 1. 国服 issuer：匹配 `lol.qq.com` 域名，提取服务器代码，加 `TENCENT_` 前缀
-   * 2. 外服 issuer：匹配 `sgp.pvp.net` / `pvp.net` 域名，通过映射表转为 SGP key
-   * 3. Fallback：使用 `/lol-chat/v1/me` 的 `platformId` + 映射表
+   * 1. 优先使用 `/lol-chat/v1/me` 的 `platformId`，这是 Pengu 环境中最接近 Akari
+   *    `--region` / `--rso_platform_id` 的来源。
+   * 2. Fallback：从 Entitlements Token 的 issuer 解析。
+   * 3. 所有解析结果都必须命中 Akari 同款 `SGP_SERVERS` 配置，否则继续 fallback。
    *
    * 已知问题（对比 LeagueAkari）：
    * - LeagueAkari 从 LeagueClient.exe 命令行参数 `--region` / `--rso_platform_id` 获取，
@@ -818,13 +825,14 @@ class LCUManager {
    * - 外服 issuer 子域名可能与 SGP_SERVERS key 不一致（如 EUW1 → EUW）。
    */
   async getSgpServerId(): Promise<string> {
-    // 尝试从 issuer 解析
-    const fromIssuer = this._parseSgpServerIdFromIssuer()
-    if (fromIssuer) return fromIssuer
-
-    // Fallback: 从 /lol-chat/v1/me 的 platformId 解析
+    // Akari 以客户端启动参数为准；Pengu 内优先使用 ChatMe.platformId 近似它。
     const fromPlatformId = await this._parseSgpServerIdFromPlatformId()
     if (fromPlatformId) return fromPlatformId
+
+    // Fallback: 从 issuer 解析。外服 issuer 有时是 euc1/apne1/usw2/apse1 这类路由集群，
+    // 不是 SGP_SERVERS key；normalizeSgpServerKey 会过滤掉这些不受支持的结果。
+    const fromIssuer = this._parseSgpServerIdFromIssuer()
+    if (fromIssuer) return fromIssuer
 
     return ''
   }
@@ -844,7 +852,7 @@ class LCUManager {
     const tencentMatch = issuer.match(/https?:\/\/([a-z0-9]+)(?:-[a-z0-9]+)*\.lol\.qq\.com/)
     if (tencentMatch) {
       const serverCode = tencentMatch[1].toUpperCase() // e.g. "HN1", "NJ100"
-      return `TENCENT_${serverCode}`
+      return normalizeSgpServerKey(`TENCENT_${serverCode}`)
     }
 
     // 外服: 匹配 pvp.net 域名
@@ -859,7 +867,7 @@ class LCUManager {
     if (externalMatch) {
       const rawCode = externalMatch[1].toUpperCase()
       // issuer 子域名可能与 SGP_SERVERS key 不一致，需要映射
-      return PLATFORM_ID_TO_SGP_KEY[rawCode] ?? rawCode
+      return normalizeSgpServerKey(rawCode)
     }
 
     return ''
@@ -875,12 +883,12 @@ class LCUManager {
       // 国服 platformId: HN1, HN10, NJ100, TJ100 等
       // 需要加 TENCENT_ 前缀
       if (TENCENT_PLATFORM_IDS.has(platformId)) {
-        return `TENCENT_${platformId}`
+        return normalizeSgpServerKey(`TENCENT_${platformId}`)
       }
 
       // 外服 platformId: EUW1, NA1, KR, JP1 等
       // 可能与 SGP_SERVERS key 不一致，需要映射
-      return PLATFORM_ID_TO_SGP_KEY[platformId] ?? platformId
+      return normalizeSgpServerKey(platformId)
     } catch {
       return ''
     }
@@ -907,8 +915,10 @@ class LCUManager {
     tag?: string
   }): Promise<import('@/types/sgp').SgpMatchHistoryLol> {
     const token = this._entitlementsToken ?? await this.getEntitlementsToken()
+    if (!this._entitlementsToken) {
+      this._entitlementsToken = token
+    }
     const sgpServerId = await this.getSgpServerId()
-    const { SGP_SERVERS } = await import('@/types/sgp')
     const server = SGP_SERVERS[sgpServerId.toUpperCase()]
     if (!server?.matchHistory) {
       throw new Error(`[SGP] 找不到服务器配置: ${sgpServerId}`)
@@ -926,7 +936,7 @@ class LCUManager {
     const resp = await fetch(url, {
       headers: {
         'Authorization': `Bearer ${token.accessToken}`,
-        'User-Agent': 'LeagueOfLegendsClient',
+        'User-Agent': 'LeagueOfLegendsClient/14.13.596.7996 (rcp-be-lol-match-history)',
       },
     })
 
