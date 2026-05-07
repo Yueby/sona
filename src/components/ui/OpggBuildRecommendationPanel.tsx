@@ -151,7 +151,7 @@ export function OpggBuildRecommendationPanel({
         </div>
 
         <div className="sobp-trend-wrap">
-          <ItemSection title="出装趋势" builds={recommendation?.lastItems} itemLimit={6} />
+          <LastItemTrendSection title="出装趋势" builds={recommendation?.lastItems} />
         </div>
 
         {showAugments && <AugmentSection title="海克斯推荐" groups={recommendation?.augments} />}
@@ -346,6 +346,32 @@ function ItemSection({ title, builds, itemLimit }: { title: string; builds?: Opg
           <StatBar value={build.pick_rate} maxRate={maxRate} />
         </div>
       ))}
+    </Section>
+  )
+}
+
+function LastItemTrendSection({ title, builds }: { title: string; builds?: OpggItemBuild[] }) {
+  const visibleItems = (builds ?? [])
+    .flatMap((build, buildIndex) => build.ids.map((id, itemIndex) => ({
+      id,
+      key: `${buildIndex}-${itemIndex}-${id}`,
+      pickRate: build.pick_rate,
+    })))
+    .slice(0, 18)
+
+  return (
+    <Section title={title} empty={visibleItems.length === 0}>
+      <div className="sobp-last-items">
+        {visibleItems.map((entry) => {
+          const item = getItemInfo(entry.id)
+          return (
+            <div className="sobp-last-item" key={entry.key}>
+              <div className="sobp-last-item-rate">{formatPercent(entry.pickRate)}</div>
+              <BuildIcon src={item.iconPath} title={item.name} description={item.description} price={item.price} size={34} />
+            </div>
+          )
+        })}
+      </div>
     </Section>
   )
 }
