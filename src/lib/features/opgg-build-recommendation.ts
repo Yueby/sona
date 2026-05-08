@@ -12,11 +12,11 @@ import { injector } from '@/lib/InjectorManager'
 import { createElement } from 'react'
 import { flushSync } from 'react-dom'
 import { createRoot, type Root } from 'react-dom/client'
-import { getQueue, getQueueName } from '@/lib/assets'
+import { getAugmentInfo, getQueue, getQueueName } from '@/lib/assets'
 import { OpggBuildRecommendationPanel, type BuildRecommendation, type RecommendationContext } from '@/components/ui/OpggBuildRecommendationPanel'
 import { lcu, LcuEventUri, type ChampSelectSession, type LCUEventMessage } from '@/lib/lcu'
 import { store } from '@/lib/store'
-import { aramggApi, type AramggChampionRecommendation, type AramggChampionStatEntry, type AramggCoreItemBuild } from '@/lib/aramgg-api'
+import { aramggApi, type AramggChampionRecommendation, type AramggChampionStatEntry, type AramggCoreItemBuild, type AramggMayhemAugments } from '@/lib/aramgg-api'
 import {
   opggApi,
   type OpggAugmentGroup,
@@ -295,15 +295,7 @@ async function loadRecommendation(context: RecommendationContext): Promise<Build
     prismItems: arena?.data.prism_items ?? [],
     lastItems: data.last_items ?? [],
     runePages: normal?.data.runes ?? [],
-    augments: augmentGroups.map((group) => ({
-      rarity: group.rarity,
-      items: group.augments.slice(0, 5).map((augment) => ({
-        id: augment.id,
-        pickRate: augment.pick_rate,
-        averagePlace: augment.total_place / Math.max(augment.play, 1),
-        firstPlace: augment.first_place / Math.max(augment.play, 1),
-      })),
-    })),
+    augments: mapOpggAugments(augmentGroups),
     meta: getRecommendationMeta(mainChampion),
   }
 }
@@ -314,7 +306,7 @@ async function loadAramggKiwiRecommendation(
   position: OpggPosition,
   tier: OpggTier,
 ): Promise<BuildRecommendation | null> {
-  const [opggChampion, aramgg] = await Promise.all([
+  const [opggChampion, aramgg, mayhemAugments] = await Promise.all([
     getChampionWithVersionFallback({
       id: context.championId,
       mode,
@@ -325,6 +317,10 @@ async function loadAramggKiwiRecommendation(
       return null
     }),
     aramggApi.getChampionRecommendation(context.championId),
+    aramggApi.getMayhemAugmentsZhCn().catch((err) => {
+      logger.warn('[ARAMGG] 海克斯稀有度请求失败，将尝试使用客户端资源兜底:', err)
+      return {} as AramggMayhemAugments
+    }),
   ])
 
   const normal = opggChampion && isNormalChampion(opggChampion) ? opggChampion : null
@@ -343,7 +339,7 @@ async function loadAramggKiwiRecommendation(
     prismItems: [],
     lastItems: mapAramggItems(aramgg.items),
     runePages: [],
-    augments: mapAramggAugments(aramgg.augments),
+    augments: mapAramggAugments(aramgg.augments, mayhemAugments),
     meta: undefined,
   }
 }
@@ -396,30 +392,81 @@ function mapAramggItems(items: Record<string, AramggChampionStatEntry>): OpggIte
     .map(({ tier: _tier, ...item }) => item)
 }
 
-function mapAramggAugments(augments: Record<string, AramggChampionStatEntry>): BuildRecommendation['augments'] {
+function getAugmentRaritySortValue(rarity: number): number {
+  if (rarity === 8) return 0
+  if (rarity === 4) return 1
+  if (rarity === 1) return 2
+  return 99
+}
+
+function normalizeAugmentRarity(value: unknown): number | null {
+  if (typeof value === 'number' && Number.isFinite(value)) return value
+  if (typeof value !== 'string') return null
+
+  const normalized = value.toLowerCase()
+  if (normalized.includes('prismatic')) return 8
+  if (normalized.includes('gold')) return 4
+  if (normalized.includes('silver')) return 1
+
+  const numeric = Number(value)
+  return Number.isFinite(numeric) ? numeric : null
+}
+
+function normalizeMayhemAugmentRarity(value: unknown, mayhemAugments: AramggMayhemAugments): number | null {
+  if (typeof value !== 'number' || !Number.isFinite(value)) return normalizeAugmentRarity(value)
+
+  const knownRarities = new Set(Object.values(mayhemAugments).map((augment) => augment.rarity))
+  if (knownRarities.has(4) || knownRarities.has(8)) return value
+
+  // Some data dumps use 0/1/2 instead of Riot's 1/4/8 rarity values.
+  if (value === 2) return 8
+  if (value === 1) return 4
+  if (value === 0) return 1
+  return value
+}
+
+function mapOpggAugments(augmentGroups: OpggAugmentGroup[]): BuildRecommendation['augments'] {
+  return augmentGroups
+    .map((group) => ({
+      rarity: group.rarity,
+      items: group.augments.slice(0, 5).map((augment) => ({
+        id: augment.id,
+        pickRate: augment.pick_rate,
+        averagePlace: augment.total_place / Math.max(augment.play, 1),
+        firstPlace: augment.first_place / Math.max(augment.play, 1),
+      })),
+    }))
+    .sort((a, b) => getAugmentRaritySortValue(a.rarity) - getAugmentRaritySortValue(b.rarity))
+}
+
+function getAramggAugmentRarity(augmentId: number, mayhemAugments: AramggMayhemAugments): number | null {
+  return normalizeAugmentRarity(getAugmentInfo(augmentId)?.rarity)
+    ?? normalizeMayhemAugmentRarity(mayhemAugments[String(augmentId)]?.rarity, mayhemAugments)
+}
+
+function mapAramggAugments(augments: Record<string, AramggChampionStatEntry>, mayhemAugments: AramggMayhemAugments): BuildRecommendation['augments'] {
   const groups = new Map<number, Array<{ id: number; pickRate: number; winRate: number }>>()
 
   Object.entries(augments).forEach(([id, augment]) => {
     const augmentId = Number(id)
-    const tier = Number(augment.tier)
-    if (!Number.isFinite(augmentId) || !Number.isFinite(tier)) return
+    const rarity = getAramggAugmentRarity(augmentId, mayhemAugments)
+    if (!Number.isFinite(augmentId) || rarity == null) return
 
-    const items = groups.get(tier) ?? []
+    const items = groups.get(rarity) ?? []
     items.push({
       id: augmentId,
       pickRate: toNumber(augment.pick_rate),
       winRate: toNumber(augment.win_rate),
     })
-    groups.set(tier, items)
+    groups.set(rarity, items)
   })
 
   return Array.from(groups.entries())
-    .sort(([a], [b]) => a - b)
-    .map(([tier, items]) => ({
-      rarity: tier,
-      label: `T${tier}`,
+    .sort(([a], [b]) => getAugmentRaritySortValue(a) - getAugmentRaritySortValue(b))
+    .map(([rarity, items]) => ({
+      rarity,
       items: items
-        .sort((a, b) => b.pickRate - a.pickRate || b.winRate - a.winRate)
+        .sort((a, b) => b.winRate - a.winRate || b.pickRate - a.pickRate)
         .slice(0, 5)
         .map((augment) => ({
           id: augment.id,

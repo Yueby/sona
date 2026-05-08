@@ -158,7 +158,7 @@ export function OpggBuildRecommendationPanel({
           <LastItemTrendSection title="出装趋势" builds={recommendation?.lastItems} />
         </div>
 
-        {showAugments && <AugmentSection title="海克斯推荐" groups={recommendation?.augments} />}
+        {showAugments && <AugmentSection title="海克斯推荐" groups={recommendation?.augments} winRateFirst={isKiwiMode(context)} />}
 
         {isLoading && <PanelMessage>正在后台加载 OP.GG 推荐数据，完成后会自动刷新。</PanelMessage>}
         {loadError && <PanelMessage warning>OP.GG 请求失败：{loadError}</PanelMessage>}
@@ -496,7 +496,7 @@ function RuneSection({ title, runes, championName }: { title: string; runes?: Op
   )
 }
 
-function AugmentSection({ title, groups }: { title: string; groups?: BuildRecommendation['augments'] }) {
+function AugmentSection({ title, groups, winRateFirst = false }: { title: string; groups?: BuildRecommendation['augments']; winRateFirst?: boolean }) {
   const visibleGroups = groups ?? []
 
   return (
@@ -509,7 +509,7 @@ function AugmentSection({ title, groups }: { title: string; groups?: BuildRecomm
               {group.items.map((augment) => {
                 const info = getAugmentInfo(augment.id)
                 const detailText = Number.isFinite(augment.winRate)
-                  ? `登场 ${formatPercent(augment.pickRate)} · 胜率 ${formatPercent(augment.winRate)}`
+                  ? formatAugmentWinRateText(augment, winRateFirst)
                   : `登场 ${formatPercent(augment.pickRate)} · 均排 ${formatPlace(augment.averagePlace)}`
                 return (
                   <div className="sobp-augment" key={augment.id}>
@@ -518,7 +518,7 @@ function AugmentSection({ title, groups }: { title: string; groups?: BuildRecomm
                       title={info?.name ?? String(augment.id)}
                       description={info?.description ?? ''}
                       subtitle={group.label ?? getAugmentRarityLabel(group.rarity)}
-                      size={28}
+                      size={40}
                       border={getAugmentBorder(info?.rarity)}
                     />
                     <div className="sobp-augment-info">
@@ -534,6 +534,12 @@ function AugmentSection({ title, groups }: { title: string; groups?: BuildRecomm
       </Section>
     </div>
   )
+}
+
+function formatAugmentWinRateText(augment: { pickRate: number; winRate?: number }, winRateFirst: boolean): string {
+  const winRateText = `胜率 ${formatPercent(augment.winRate)}`
+  const pickRateText = `登场 ${formatPercent(augment.pickRate)}`
+  return winRateFirst ? `${winRateText} · ${pickRateText}` : `${pickRateText} · ${winRateText}`
 }
 
 function RankBadge({ rank }: { rank: number }) {
