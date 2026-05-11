@@ -107,6 +107,36 @@ export interface RunePage extends RunePagePayload {
   order?: number
 }
 
+export interface ItemSetEntry {
+  id: string
+  count: number
+}
+
+export interface ItemSetBlock {
+  type: string
+  items: ItemSetEntry[]
+}
+
+export interface ItemSet {
+  uid: string
+  title: string
+  type: string
+  mode: string
+  map: string
+  associatedChampions: number[]
+  associatedMaps: number[]
+  blocks: ItemSetBlock[]
+  preferredItemSlots: unknown[]
+  sortrank: number
+  startedFrom: string
+}
+
+export interface ItemSetWrapper {
+  accountId: number
+  itemSets: ItemSet[]
+  timestamp: number
+}
+
 export interface RegaliaBannerInventoryItem {
   assetPath: string
   id: string
@@ -407,6 +437,16 @@ class LCUManager {
   /** 设置当前召唤师头像 */
   setProfileIcon(profileIconId: number): Promise<unknown> {
     return put('/lol-summoner/v1/current-summoner/icon', { profileIconId })
+  }
+
+  /** 获取指定召唤师的客户端装备集 wrapper */
+  getItemSets(summonerId: number): Promise<ItemSetWrapper> {
+    return get<ItemSetWrapper>(`/lol-item-sets/v1/item-sets/${summonerId}/sets`)
+  }
+
+  /** 覆盖写入指定召唤师的客户端装备集 wrapper */
+  putItemSets(summonerId: number, wrapper: ItemSetWrapper): Promise<ItemSetWrapper> {
+    return put<ItemSetWrapper>(`/lol-item-sets/v1/item-sets/${summonerId}/sets`, wrapper)
   }
 
   /** 生成基础观战 payload；好友 presence 中有 spectatorKey 时应优先补上。 */

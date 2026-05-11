@@ -10,6 +10,7 @@ import { lcu, SGP_SERVERS } from '@/lib/lcu'
 import { aramggApi } from '@/lib/aramgg-api'
 import { searchChampions, type ChampionInfo, getChampionBalanceMeta, getAllChampionBalances } from '@/lib/assets'
 import { openOpggBuildRecommendationDebugPanel } from '@/lib/features/opgg-build-recommendation'
+import { opggApi } from '@/lib/opgg-api'
 import { logger } from '@/index'
 import '@/styles/SettingsPage.css'
 
@@ -210,6 +211,39 @@ export function DebugPage() {
 
   const fetchAramggMayhemAugmentsZhCn = async () => {
     return aramggApi.getMayhemAugmentsZhCn()
+  }
+
+  const fetchOpggDebugBuildData = async () => {
+    const championId = await getOpggDebugChampionId()
+    const mode = 'ranked'
+    const position = 'mid'
+    const tier = 'platinum_plus'
+    const champion = await opggApi.getChampion({
+      id: championId,
+      region: 'global',
+      mode,
+      position,
+      tier,
+    })
+    const data = champion.data
+
+    return {
+      request: {
+        championId,
+        region: 'global',
+        mode,
+        position,
+        tier,
+        version: champion.meta.version,
+      },
+      summary: data.summary,
+      starter_items: data.starter_items ?? [],
+      boots: data.boots ?? [],
+      core_items: data.core_items ?? [],
+      prism_items: 'prism_items' in data ? data.prism_items : [],
+      last_items: data.last_items ?? [],
+      raw: champion,
+    }
   }
 
   const fetchRegaliaBanners = async () => {
@@ -498,6 +532,9 @@ export function DebugPage() {
             return fetchOpggJson(`/api/global/champions/ranked/${id}/mid`, { tier: 'platinum_plus' })
           })}>
             单英雄 ranked
+          </SonaButton>
+          <SonaButton variant="primary" onClick={() => runAndLog('OP.GG 配装字段 ranked/mid', fetchOpggDebugBuildData)}>
+            配装字段
           </SonaButton>
           <SonaButton onClick={() => runAndLog('OP.GG 单英雄 ARAM', async () => {
             const id = await getOpggDebugChampionId()
