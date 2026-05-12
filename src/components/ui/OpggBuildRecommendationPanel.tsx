@@ -75,6 +75,12 @@ export interface BuildRecommendation {
   prismItems: OpggItemBuild[]
   lastItems: OpggItemBuild[]
   runePages: OpggRuneBuild[]
+  matchups: Array<{
+    championId: number
+    play: number
+    win: number
+    winRate: number
+  }>
   augments: Array<{
     rarity: number
     label?: string
@@ -157,6 +163,8 @@ export function OpggBuildRecommendationPanel({
         <div className="sobp-trend-wrap">
           <LastItemTrendSection title="出装趋势" builds={recommendation?.lastItems} />
         </div>
+
+        <MatchupSection title="优势 / 劣势对局" matchups={recommendation?.matchups} />
 
         {showAugments && <AugmentSection title="海克斯推荐" groups={recommendation?.augments} winRateFirst={isKiwiMode(context)} />}
 
@@ -410,6 +418,54 @@ function SpellSection({ title, builds, limit }: { title: string; builds?: OpggIt
         </div>
       ))}
     </Section>
+  )
+}
+
+function MatchupSection({ title, matchups }: { title: string; matchups?: BuildRecommendation['matchups'] }) {
+  const items = matchups ?? []
+  const advantages = [...items]
+    .sort((a, b) => b.winRate - a.winRate || b.play - a.play)
+    .slice(0, 9)
+  const disadvantages = [...items]
+    .sort((a, b) => a.winRate - b.winRate || b.play - a.play)
+    .slice(0, 9)
+  const hasData = advantages.length > 0 || disadvantages.length > 0
+
+  return (
+    <div className="sobp-matchup-wrap">
+      <Section title={title} empty={!hasData} emptyText="暂无对局克制数据">
+        <div className="sobp-matchup-columns">
+          <MatchupGroup title="优势对局" items={advantages} tone="good" />
+          <MatchupGroup title="劣势对局" items={disadvantages} tone="bad" />
+        </div>
+      </Section>
+    </div>
+  )
+}
+
+function MatchupGroup({ title, items, tone }: { title: string; items: BuildRecommendation['matchups']; tone: 'good' | 'bad' }) {
+  return (
+    <div className="sobp-matchup-group">
+      <div className={`sobp-matchup-heading sobp-matchup-heading--${tone}`}>{title}</div>
+      <div className="sobp-matchup-list">
+        {items.map((item) => {
+          const champion = getChampionById(item.championId)
+          const championName = champion ? `${champion.title} ${champion.name}` : `英雄 ${item.championId}`
+          return (
+            <div className="sobp-matchup" key={`${tone}-${item.championId}`}>
+              <img className="sobp-matchup-icon" src={`/lol-game-data/assets/v1/champion-icons/${item.championId}.png`} alt="" />
+              <div className="sobp-matchup-info">
+                <span className="sobp-matchup-name" title={championName}>{championName}</span>
+                <span className="sobp-matchup-detail">
+                  <span className={`sobp-matchup-rate sobp-matchup-rate--${tone}`}>{formatPercent(item.winRate)}</span>
+                  <span className="sobp-matchup-play">{item.play.toLocaleString()}场</span>
+                </span>
+              </div>
+            </div>
+          )
+        })}
+      </div>
+    </div>
   )
 }
 

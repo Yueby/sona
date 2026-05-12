@@ -575,6 +575,24 @@ export function DebugPage() {
               拉起配装推荐面板
             </SonaButton>
           </div>
+          <SonaButton onClick={async () => {
+            const anchor = opggPanelButtonRef.current
+            if (!anchor) return
+
+            try {
+              const id = await getOpggDebugChampionId()
+              await openOpggBuildRecommendationDebugPanel(anchor, id, {
+                queueId: 420,
+                gameMode: 'CLASSIC',
+                position: 'mid',
+              })
+              setOutput(`✅ 已拉起 OP.GG 配装推荐面板\nchampionId=${id} · ranked/mid · queueId=420`)
+            } catch (err) {
+              setOutput(`❌ 拉起 ranked 配装推荐面板失败\n${err instanceof Error ? err.message : String(err)}`)
+            }
+          }}>
+            拉起 ranked 面板
+          </SonaButton>
         </div>
         <p className="sona-subtitle">单英雄接口和面板预览优先使用「游戏资源」里选择的英雄；未选择时尝试当前选人英雄，最后用兰博 68 兜底。</p>
       </SettingGroup>

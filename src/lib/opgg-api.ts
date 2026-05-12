@@ -131,6 +131,12 @@ export interface OpggGameLength {
   rank: number
 }
 
+export interface OpggCounter {
+  champion_id: number
+  play: number
+  win: number
+}
+
 export interface OpggNormalChampionData {
   summary: OpggSummary
   summoner_spells: OpggItemBuild[]
@@ -146,7 +152,7 @@ export interface OpggNormalChampionData {
   skill_evolves: unknown[]
   trends: OpggTrends
   game_lengths: OpggGameLength[]
-  counters: unknown[]
+  counters: OpggCounter[]
   augment_group?: OpggAugmentGroup[]
 }
 

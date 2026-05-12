@@ -12,7 +12,7 @@ import { injector } from '@/lib/InjectorManager'
 import { createElement } from 'react'
 import { flushSync } from 'react-dom'
 import { createRoot, type Root } from 'react-dom/client'
-import { getAugmentInfo, getChampionById, getQueue, getQueueName } from '@/lib/assets'
+import { getAllChampions, getAugmentInfo, getChampionById, getQueue, getQueueName } from '@/lib/assets'
 import { OpggBuildRecommendationPanel, type BuildRecommendation, type RecommendationContext } from '@/components/ui/OpggBuildRecommendationPanel'
 import { lcu, LcuEventUri, type ChampSelectSession, type ItemSet, type ItemSetBlock, type LCUEventMessage, type RunePage, type RunePagePayload } from '@/lib/lcu'
 import { store } from '@/lib/store'
@@ -742,6 +742,7 @@ async function loadRecommendation(context: RecommendationContext): Promise<Build
     prismItems: arena?.data.prism_items ?? [],
     lastItems: data.last_items ?? [],
     runePages: normal?.data.runes ?? [],
+    matchups: normal ? mapOpggMatchups(normal.data.counters) : [],
     augments: mapOpggAugments(augmentGroups),
     meta: getRecommendationMeta(mainChampion),
   }
@@ -786,6 +787,7 @@ async function loadAramggKiwiRecommendation(
     prismItems: [],
     lastItems: mapAramggItems(aramgg.items),
     runePages: [],
+    matchups: [],
     augments: mapAramggAugments(aramgg.augments, mayhemAugments),
     meta: undefined,
   }
@@ -891,6 +893,17 @@ function getAramggAugmentRarity(augmentId: number, mayhemAugments: AramggMayhemA
     ?? normalizeMayhemAugmentRarity(mayhemAugments[String(augmentId)]?.rarity, mayhemAugments)
 }
 
+function mapOpggMatchups(counters: NonNullable<OpggNormalModeChampion['data']['counters']>): BuildRecommendation['matchups'] {
+  return counters
+    .map((counter) => ({
+      championId: counter.champion_id,
+      play: counter.play,
+      win: counter.win,
+      winRate: counter.play > 0 ? counter.win / counter.play : 0,
+    }))
+    .filter((counter) => counter.championId > 0 && counter.play > 0)
+}
+
 function mapAramggAugments(augments: Record<string, AramggChampionStatEntry>, mayhemAugments: AramggMayhemAugments): BuildRecommendation['augments'] {
   const groups = new Map<number, Array<{ id: number; pickRate: number; winRate: number }>>()
 
@@ -928,12 +941,7 @@ function getRecommendationMeta(champion: OpggChampion): BuildRecommendation['met
   const tierData = 'tier_data' in stats ? stats.tier_data : undefined
   const rank = tierData?.rank && tierData.rank > 0 ? tierData.rank : stats.rank > 0 ? stats.rank : null
   const previousRank = tierData?.rank_prev && tierData.rank_prev > 0 ? tierData.rank_prev : null
-  let totalRank: number | null = null
-
-  if (isNormalChampion(champion)) {
-    const trends = champion.data.trends
-    totalRank = trends?.total_position_rank || trends?.total_rank || null
-  }
+  const totalRank = getAllChampions().length || null
 
   return {
     rank,
@@ -1134,14 +1142,18 @@ async function openRecommendationPanel(anchor: HTMLElement, contextOverride?: Re
   }
 }
 
-export async function openOpggBuildRecommendationDebugPanel(anchor: HTMLElement, championId = 68) {
+export async function openOpggBuildRecommendationDebugPanel(
+  anchor: HTMLElement,
+  championId = 68,
+  contextOverride: Partial<Omit<RecommendationContext, 'championId' | 'gameVersion'>> = {},
+) {
   const gameVersion = await lcu.getGameVersion().catch(() => currentContext.gameVersion)
   await openRecommendationPanel(anchor, {
     championId,
-    queueId: 3100,
+    queueId: contextOverride.queueId ?? 3100,
     gameVersion,
-    gameMode: 'KIWI',
-    position: 'none',
+    gameMode: contextOverride.gameMode ?? 'KIWI',
+    position: contextOverride.position ?? 'none',
   })
 }
 
