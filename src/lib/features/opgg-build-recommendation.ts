@@ -74,6 +74,8 @@ const MAX_RECOMMENDATION_CACHE_SIZE = 8
 let phaseUnsub: (() => void) | null = null
 let champSelectUnsub: (() => void) | null = null
 let runePagesUnsub: (() => void) | null = null
+let championLockPollTimer: number | null = null
+let championLockPollAttempts = 0
 let injectRegistered = false
 let currentContext: RecommendationContext = {
   championId: 0,
@@ -660,6 +662,47 @@ function syncSavedSmartLoadoutWhenReady(context: RecommendationContext): void {
   }, SMART_LOADOUT_RESTORE_DEBOUNCE_MS)
 }
 
+function stopChampionLockPolling() {
+  if (championLockPollTimer != null) {
+    window.clearTimeout(championLockPollTimer)
+    championLockPollTimer = null
+  }
+  championLockPollAttempts = 0
+}
+
+function scheduleRefreshWhenChampionLocked(delay = 250) {
+  if (championLockPollTimer != null) return
+
+  championLockPollTimer = window.setTimeout(async () => {
+    championLockPollTimer = null
+    championLockPollAttempts++
+
+    try {
+      const phase = await lcu.getGameflowPhase().catch(() => null)
+      if (phase !== 'ChampSelect') {
+        stopChampionLockPolling()
+        return
+      }
+
+      const session = await lcu.getChampSelectSession()
+      if (isLocalChampionLocked(session)) {
+        stopChampionLockPolling()
+        await refreshContext(session)
+        return
+      }
+    } catch {
+      // ChampSelect session may not be ready immediately after phase changes.
+    }
+
+    if (championLockPollAttempts < 600) {
+      scheduleRefreshWhenChampionLocked(500)
+    } else {
+      stopChampionLockPolling()
+      logger.warn('[OPGG] 等待本地英雄锁定超时，未触发智能配置')
+    }
+  }, delay)
+}
+
 async function refreshContext(session?: ChampSelectSession) {
   try {
     const currentSession = session ?? await lcu.getChampSelectSession()
@@ -1244,6 +1287,7 @@ function unmountPanel() {
 }
 
 function unmount(resetContext = true) {
+  stopChampionLockPolling()
   unmountPanel()
   if (resetContext) {
     currentContext = {
@@ -1270,36 +1314,53 @@ function unmount(resetContext = true) {
   spellApplyInFlightKeys.clear()
 }
 
+function startOpggListeners() {
+  if (phaseUnsub) return
+
+  phaseUnsub = lcu.observe(LcuEventUri.GAMEFLOW_PHASE_CHANGE, (event: LCUEventMessage) => {
+    const phase = event.data as GameflowPhase
+    if (phase === 'ChampSelect') {
+      logger.info('[OPGG] 进入 ChampSelect，等待本地英雄锁定')
+      scheduleRefreshWhenChampionLocked()
+    } else {
+      unmount()
+    }
+  })
+
+  champSelectUnsub = lcu.observe(LcuEventUri.CHAMP_SELECT, (event: LCUEventMessage) => {
+    if (event.eventType !== 'Create' && event.eventType !== 'Update') return
+    const session = event.data as ChampSelectSession
+    if (isLocalChampionLocked(session)) {
+      stopChampionLockPolling()
+      refreshContext(session)
+    } else {
+      scheduleRefreshWhenChampionLocked(500)
+    }
+  })
+
+  runePagesUnsub = lcu.observe(RUNE_PAGES_EVENT_URI, handleRunePageEvent)
+
+  lcu.getGameflowPhase().then((phase) => {
+    if (phase === 'ChampSelect') {
+      scheduleRefreshWhenChampionLocked()
+    }
+  }).catch(() => { /* ignore */ })
+
+  logger.info('[OPGG] 配装推荐接管已启用 ✓')
+}
+
 export function updateOpggBuildRecommendation(enabled: boolean) {
   if (enabled && !phaseUnsub) {
-    phaseUnsub = lcu.observe(LcuEventUri.GAMEFLOW_PHASE_CHANGE, (event: LCUEventMessage) => {
-      const phase = event.data as GameflowPhase
-      if (phase !== 'ChampSelect') {
-        unmount()
-      }
-    })
-
-    champSelectUnsub = lcu.observe(LcuEventUri.CHAMP_SELECT, (event: LCUEventMessage) => {
-      if (event.eventType !== 'Create' && event.eventType !== 'Update') return
-      refreshContext(event.data as ChampSelectSession)
-    })
-
-    runePagesUnsub = lcu.observe(RUNE_PAGES_EVENT_URI, handleRunePageEvent)
-
-    lcu.getGameflowPhase().then((phase) => {
-      if (phase === 'ChampSelect') {
-        refreshContext()
-      }
-    }).catch(() => { /* ignore */ })
-
-    logger.info('[OPGG] 配装推荐接管已启用 ✓')
+    startOpggListeners()
   } else if (enabled && phaseUnsub) {
     lcu.getGameflowPhase().then((phase) => {
       if (phase === 'ChampSelect') {
-        refreshContext()
+        scheduleRefreshWhenChampionLocked()
       }
     }).catch(() => { /* ignore */ })
-  } else if (!enabled && phaseUnsub) {
+  } else if (!enabled) {
+    if (!phaseUnsub) return
+
     phaseUnsub()
     phaseUnsub = null
     if (champSelectUnsub) {
