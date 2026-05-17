@@ -63,6 +63,7 @@
 ## 目录
 - [简介](#简介)
 - [功能特性](#功能特性)
+- [效果展示](#效果展示)
 - [安装](#安装)
 - [使用](#使用)
 - [技术架构](#技术架构)
@@ -153,6 +154,74 @@
 | ⌨️ | **快捷键** | 按 F1（可配置 F1~F5）随时呼出/关闭面板 |
 | 📱 | **增强在线状态** | 支持手机在线、隐身等额外状态，启动时自动恢复 |
 | 🔄 | **DOM 自愈** | 客户端 Ember.js 刷新 DOM 后自动补回所有注入功能 |
+
+<br>
+
+<h2 id="效果展示">🖼️ 效果展示</h2>
+
+### 英雄选择界面增强
+
+<p align="center">
+  <img src="markdown/examples/英雄选择界面增强.png" alt="英雄选择界面增强" width="100%">
+</p>
+
+<p align="center"><em>▲ 选人阶段显示队友近期胜率、KDA、头像粒子特效，并支持点击头像查看战绩。</em></p>
+
+### 英雄 T 级展示
+
+<p align="center">
+  <img src="markdown/examples/英雄选择T级展示.png" alt="英雄选择 T 级展示" width="100%">
+</p>
+
+<p align="center"><em>▲ 在英雄选择网格、己方头像和备选席展示 OP.GG T 级角标。</em></p>
+
+### 配装推荐
+
+<p align="center">
+  <img src="markdown/examples/配装推荐.png" alt="配装推荐" width="100%">
+</p>
+
+<p align="center"><em>▲ 锁定英雄后查看当前模式的 OP.GG 配装、符文和召唤师技能推荐。</em></p>
+
+### 海克斯推荐
+
+<p align="center">
+  <img src="markdown/examples/海克斯推荐.png" alt="海克斯推荐" width="100%">
+</p>
+
+<p align="center"><em>▲ 斗魂、海斗展示海克斯推荐。</em></p>
+
+### 增强组队界面
+
+<p align="center">
+  <img src="markdown/examples/增强组队界面.png" alt="增强组队界面" width="100%">
+</p>
+
+<p align="center"><em>▲ 组队界面旗帜上方展示近期表现，点击成员头像区域可打开战绩面板。</em></p>
+
+### 游戏中好友状态
+
+<p align="center">
+  <img src="markdown/examples/游戏中好友显示模式和时长.png" alt="游戏中好友显示模式和时长" width="100%">
+</p>
+
+<p align="center"><em>▲ 好友列表中实时显示游戏中好友的模式与对局时长。</em></p>
+
+### 自定义生涯背景
+
+<p align="center">
+  <img src="markdown/examples/自定义生涯背景.png" alt="自定义生涯背景" width="100%">
+</p>
+
+<p align="center"><em>▲ 生涯背景选择器支持搜索所有皮肤，包括特殊皮肤与多形态皮肤。</em></p>
+
+### 自定义旗帜
+
+<p align="center">
+  <img src="markdown/examples/自定义旗帜.png" alt="自定义旗帜" width="100%">
+</p>
+
+<p align="center"><em>▲ 在挑战身份页面本地更换任意旗帜，打造更个性化的客户端展示。</em></p>
 
 <br>
 
