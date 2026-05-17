@@ -435,7 +435,8 @@ function createManagedItemSet(context: RecommendationContext, recommendation: Bu
 
 function isSameManagedItemSetContext(itemSet: ItemSet, nextItemSet: ItemSet): boolean {
   if (itemSet.uid === nextItemSet.uid) return true
-  return itemSet.title === nextItemSet.title
+  if (itemSet.title === nextItemSet.title) return true
+  return itemSet.title?.startsWith(SONA_ITEM_SET_TITLE_PREFIX) === true
 }
 
 function isCurrentRecommendationContext(context: RecommendationContext): boolean {
