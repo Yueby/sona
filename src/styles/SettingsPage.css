@@ -127,6 +127,79 @@
   color: #a09b8c;
 }
 
+/* ---- 英雄优先级队列 ---- */
+.sona-champ-priority-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.sona-champ-priority-card {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  max-width: 240px;
+  padding: 8px 10px;
+  background: rgba(30, 35, 40, 0.4);
+  border: 1px solid rgba(200, 170, 110, 0.1);
+  border-radius: 4px;
+  color: #f0e6d2;
+  transition: transform 0.18s ease, border-color 0.18s ease, background 0.18s ease;
+}
+
+.sona-champ-priority-card:hover {
+  transform: translateX(4px);
+  border-color: rgba(200, 170, 110, 0.28);
+  background: rgba(30, 35, 40, 0.58);
+}
+
+.sona-champ-priority-index {
+  min-width: 18px;
+  height: 18px;
+  border-radius: 3px;
+  background: rgba(200, 170, 110, 0.18);
+  color: #c8aa6e;
+  font-size: 11px;
+  line-height: 18px;
+  text-align: center;
+  font-weight: 700;
+}
+
+.sona-champ-priority-icon {
+  width: 30px;
+  height: 30px;
+  border-radius: 3px;
+  object-fit: cover;
+  border: 1px solid rgba(200, 170, 110, 0.3);
+}
+
+.sona-champ-priority-name {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 12px;
+}
+
+.sona-champ-priority-remove {
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  border: 1px solid rgba(200, 170, 110, 0.08);
+  border-radius: 3px;
+  background: rgba(120, 90, 40, 0.2);
+  color: #a09b8c;
+  line-height: 20px;
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+}
+
+.sona-champ-priority-remove:hover {
+  background: rgba(190, 64, 64, 0.28);
+  border-color: rgba(190, 64, 64, 0.45);
+  color: #f0e6d2;
+}
+
 /* ---- 设置备份列表 ---- */
 .sona-backup-item {
   display: flex;

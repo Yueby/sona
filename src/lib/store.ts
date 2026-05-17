@@ -92,6 +92,8 @@ export interface SonaConfig {
   globalParticle: boolean
   /** 好友智能分组（开黑好友用同样颜色的border-right展示） */
   friendSmartGroup: boolean
+  /** 增强游戏中好友状态（显示模式、英雄和实时对局时长） */
+  enhancedFriendGameStatus: boolean
   /** 自定义生涯背景 */
   customProfileBg: boolean
   /** 无视他人生涯隐私（XHR 响应改写，需重启生效） */
@@ -122,10 +124,14 @@ export interface SonaConfig {
   rankDivision: string
   /** 秒抢英雄开关 */
   autoLockChampion: boolean
-  /** 秒抢目标英雄 ID */
-  autoLockChampionId: number
+  /** 秒抢目标英雄优先级队列 */
+  autoLockChampionIds: number[]
   /** 秒抢时是否直接锁定（false 则只选择不锁定） */
   autoLockInstant: boolean
+  /** 自动禁用英雄开关 */
+  autoBanChampion: boolean
+  /** 自动禁用目标英雄优先级队列 */
+  autoBanChampionIds: number[]
   /** 平衡性调整 buff 提示（游玩特定模式时悬停头像显示数值调整） */
   balanceBuffTooltip: boolean
   /** 国服解锁炫彩分页（生涯藏品页显示"炫彩"tab，需重启客户端） */
@@ -172,6 +178,7 @@ const DEFAULT_CONFIG: SonaConfig = {
   sideIndicatorMsgType: 'celebration',
   globalParticle: false,
   friendSmartGroup: false,
+  enhancedFriendGameStatus: true,
   hideTFT: false,
   hideRightNavText: false,
   customProfileBg: false,
@@ -184,8 +191,10 @@ const DEFAULT_CONFIG: SonaConfig = {
   rankTier: 'CHALLENGER',
   rankDivision: 'I',
   autoLockChampion: false,
-  autoLockChampionId: 0,
+  autoLockChampionIds: [],
   autoLockInstant: true,
+  autoBanChampion: false,
+  autoBanChampionIds: [],
   balanceBuffTooltip: false,
   unlockChromas: true,
   champSelectQuitButton: false,

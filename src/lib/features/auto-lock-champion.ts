@@ -1,7 +1,7 @@
 import { logger } from '@/index'
 import { store } from '@/lib/store'
 import { lcu, LcuEventUri } from '@/lib/lcu'
-import type { LCUEventMessage, GameflowPhase } from '@/lib/lcu'
+import type { LCUEventMessage, GameflowPhase, ChampSelectSession } from '@/lib/lcu'
 import { sleep } from '@/lib/utils'
 import { getChampionById } from '@/lib/assets'
 
@@ -22,16 +22,77 @@ async function notifyAutoLockSuccess(championId: number, isLock: boolean) {
   }
 }
 
+function getConfiguredChampionIds(): number[] {
+  return [...new Set(store.get('autoLockChampionIds').filter((id) => id > 0))]
+}
+
+async function getOptionalIdSet(loader: () => Promise<number[]>): Promise<Set<number> | null> {
+  try {
+    return new Set(await loader())
+  } catch {
+    return null
+  }
+}
+
+function collectUnavailablePickIds(session: ChampSelectSession, actionChampionId: number): Set<number> {
+  const unavailable = new Set<number>()
+
+  session.actions.flat(2).forEach((action) => {
+    if (action.type === 'ban' && action.completed && action.championId > 0) {
+      unavailable.add(action.championId)
+    }
+  })
+
+  ;[...session.bans.myTeamBans, ...session.bans.theirTeamBans].forEach((id) => {
+    if (id > 0) unavailable.add(id)
+  })
+
+  if (!session.allowDuplicatePicks) {
+    ;[...session.myTeam, ...session.theirTeam].forEach((player) => {
+      if (player.championId > 0 && player.championId !== actionChampionId) {
+        unavailable.add(player.championId)
+      }
+    })
+  }
+
+  session.myTeam.forEach((player) => {
+    if (player.cellId !== session.localPlayerCellId && player.championPickIntent > 0) {
+      unavailable.add(player.championPickIntent)
+    }
+  })
+
+  return unavailable
+}
+
+async function resolveTargetChampionId(session: ChampSelectSession, actionChampionId = 0): Promise<number | null> {
+  const championIds = getConfiguredChampionIds()
+  if (championIds.length === 0) return null
+
+  const [pickableIds, disabledIds] = await Promise.all([
+    getOptionalIdSet(() => lcu.getPickableChampionIds()),
+    getOptionalIdSet(() => lcu.getDisabledChampionIds()),
+  ])
+  const unavailableIds = collectUnavailablePickIds(session, actionChampionId)
+
+  return championIds.find((id) => {
+    if (unavailableIds.has(id)) return false
+    if (disabledIds?.has(id)) return false
+    if (pickableIds && !pickableIds.has(id)) return false
+    return true
+  }) ?? null
+}
+
 /**
  * 监听英雄选择的 actions 变化，当轮到自己的 pick action 处于 isInProgress 时秒锁
  * 仅在有 pick 动作的模式生效（排位/匹配等），大乱斗等无 pick 的模式不受影响
  */
 async function tryAutoLockChampion() {
-  const championId = store.get('autoLockChampionId')
-  if (!championId || championId <= 0) {
-    logger.warn('[AutoLock] 未设置目标英雄 ID')
+  if (getConfiguredChampionIds().length === 0) {
+    logger.warn('[AutoLock] 未设置目标英雄队列')
     return
   }
+
+  let lastPreselectedChampionId = 0
 
   // 排位赛 BP 可能长达 5 分钟，300 次 × 1s 轮询足够覆盖
   for (let attempt = 0; attempt < 300; attempt++) {
@@ -39,6 +100,11 @@ async function tryAutoLockChampion() {
       const session = await lcu.getChampSelectSession()
 
       const allActions = session.actions.flat(2)
+      if (allActions.length === 0) {
+        await sleep(1000)
+        continue
+      }
+
       const myPickAction = allActions.find(
         (a) => a.actorCellId === session.localPlayerCellId && a.type === 'pick' && !a.completed
       )
@@ -52,11 +118,41 @@ async function tryAutoLockChampion() {
         continue
       }
 
-      if (myPickAction.isInProgress) {
-        // 关键：如果是 PLANNING（亮英雄）阶段，不能执行锁定，继续等待
-        if (session.timer.phase === 'PLANNING') {
+      if (session.timer.phase === 'PLANNING') {
+        const championId = await resolveTargetChampionId(session, myPickAction.championId)
+        if (!championId) {
           await sleep(1000)
           continue
+        }
+
+        const localPlayer = session.myTeam.find((player) => player.cellId === session.localPlayerCellId)
+        const alreadyPreselected = localPlayer?.championPickIntent === championId || myPickAction.championId === championId
+
+        if (lastPreselectedChampionId !== championId && !alreadyPreselected) {
+          const actionUrl = `/lol-champ-select/v1/session/actions/${myPickAction.id}`
+          const patchRes = await fetch(actionUrl, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ championId }),
+          })
+
+          if (patchRes.ok) {
+            lastPreselectedChampionId = championId
+            logger.info('[AutoLock] 预选阶段已亮出英雄 ID: %d (actionId: %d)', championId, myPickAction.id)
+          } else {
+            logger.warn('[AutoLock] 预选阶段亮英雄失败 (status=%d)', patchRes.status)
+          }
+        }
+
+        await sleep(1000)
+        continue
+      }
+
+      if (myPickAction.isInProgress) {
+        const championId = await resolveTargetChampionId(session, myPickAction.championId)
+        if (!championId) {
+          logger.warn('[AutoLock] 目标英雄队列中没有当前可选英雄')
+          return
         }
 
         const instant = store.get('autoLockInstant')

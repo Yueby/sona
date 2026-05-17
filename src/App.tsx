@@ -111,7 +111,7 @@ export function App() {
     <Modal
       open={visible}
       onClose={handleClose}
-      width={840}
+      width={900}
       height={560}
     >
       <div className="sona-layout">

@@ -153,6 +153,44 @@ export interface LobbyMember {
 
 // ==================== 好友相关 ====================
 
+export type LolGameMode =
+  | 'CLASSIC'
+  | 'ARAM'
+  | 'CHERRY'
+  | 'STRAWBERRY'
+  | 'TFT'
+  | 'KIWI'
+  | 'URF'
+  | 'ARURF'
+  | (string & {})
+
+export type LolGameStatus =
+  | 'outOfGame'
+  | 'inQueue'
+  | 'championSelect'
+  | 'inGame'
+  | 'spectating'
+  | (string & {})
+
+export type LolIconOverride = '' | 'summonerIcon' | 'companion' | (string & {})
+
+export type LolRankedDivision = 'I' | 'II' | 'III' | 'IV' | 'NA' | (string & {})
+
+export type LolRankedTier =
+  | 'IRON'
+  | 'BRONZE'
+  | 'SILVER'
+  | 'GOLD'
+  | 'PLATINUM'
+  | 'EMERALD'
+  | 'DIAMOND'
+  | 'MASTER'
+  | 'GRANDMASTER'
+  | 'CHALLENGER'
+  | 'NONE'
+  | 'NA'
+  | (string & {})
+
 /**
  * 好友 / ChatMe 共用的 LOL 子状态字段
  *
@@ -172,22 +210,22 @@ export interface LolSubStatus {
   challengePoints?: string
   /** 选中展示的 3 个挑战 token（逗号分隔） */
   challengeTokensSelected?: string
-  /** 当前使用的英雄 ID（"" 表示未选） */
+  /** 当前使用的英雄 ID；TFT 通常为 "" */
   championId?: string
-  /** 小小英雄 ID */
+  /** 小小英雄 ID；TFT 中代表当前小小英雄，普通 LOL 也可能存在 */
   companionId?: string
-  /** 击杀特效皮肤 ID */
+  /** 击杀特效皮肤 ID；TFT 中通常对应棋盘/特效装饰 */
   damageSkinId?: string
   /** 当前对局 ID（"" 或 undefined 表示不在对局） */
   gameId?: string
-  /** 游戏模式：CLASSIC/ARAM/KIWI（大乱斗）/URF/ARURF/CHERRY 等 */
-  gameMode?: string
-  /** 队列类型（历史字段，和 queueId 二选一存在） */
+  /** 游戏模式：CLASSIC/ARAM/CHERRY/TFT/KIWI/URF/ARURF 等 */
+  gameMode?: LolGameMode
+  /** 队列类型（如 CHERRY/RANKED_TFT/RANKED_SOLO_5x5，和 queueId 二选一存在） */
   gameQueueType?: string
   /** 游戏状态：outOfGame / inQueue / championSelect / inGame / spectating 等 */
-  gameStatus?: string
-  /** 头像覆盖："summonerIcon" 或 "" */
-  iconOverride?: string
+  gameStatus?: LolGameStatus
+  /** 头像覆盖：普通 LOL 多为 "summonerIcon"，TFT 多为 "companion"，未覆盖为 "" */
+  iconOverride?: LolIconOverride
   /** 是否可被观战：ALL / FRIENDS / NONE */
   isObservable?: string
   /** 传说精通分数 */
@@ -210,27 +248,27 @@ export interface LolSubStatus {
   puuid?: string
   /** 队列 ID（数字的字符串形式，如 "2400" 代表大乱斗） */
   queueId?: string
-  /** 当前赛季排位子段位：I/II/III/IV */
-  rankedLeagueDivision?: string
-  /** 当前赛季排位队列：RANKED_SOLO_5x5 / RANKED_FLEX_SR / RANKED_TFT_TURBO 等 */
+  /** 当前赛季排位子段位：I/II/III/IV；大师及以上或 TFT 场景常见 NA */
+  rankedLeagueDivision?: LolRankedDivision
+  /** 当前赛季排位队列：RANKED_SOLO_5x5 / RANKED_FLEX_SR / RANKED_TFT / RANKED_TFT_TURBO 等 */
   rankedLeagueQueue?: string
   /** 当前赛季排位段位 */
-  rankedLeagueTier?: string
+  rankedLeagueTier?: LolRankedTier
   /** 当前赛季连败局数（字符串） */
   rankedLosses?: string
-  /** 上赛季子段位 */
-  rankedPrevSeasonDivision?: string
+  /** 上赛季子段位；大师及以上或 TFT 场景常见 NA */
+  rankedPrevSeasonDivision?: LolRankedDivision
   /** 上赛季段位 */
-  rankedPrevSeasonTier?: string
+  rankedPrevSeasonTier?: LolRankedTier
   /** 分赛段奖励等级 */
   rankedSplitRewardLevel?: string
   /** 当前赛季连胜局数（字符串） */
   rankedWins?: string
   /** 纹章 JSON 字符串 */
   regalia?: string
-  /** 皮肤变体 ID */
+  /** 皮肤变体 ID；TFT 通常为 "" */
   skinVariant?: string
-  /** 皮肤名（英文短名） */
+  /** 皮肤名（英文短名）；TFT 通常为 "" */
   skinname?: string
   /** 观战 key（base64，进入观战用） */
   spectatorKey?: string
@@ -525,6 +563,49 @@ export interface ChampSelectTrade {
   cellId: number
   id: number
   state: 'INVALID' | 'AVAILABLE' | 'BUSY' | 'RECEIVED' | 'SENT' | (string & {})
+}
+
+/** 英雄选择阶段单个召唤师状态 — GET /lol-champ-select/v1/summoners/{cellId} */
+export interface ChampSelectSummoner {
+  actingBackgroundAnimationState: string
+  activeActionType: string
+  areSummonerActionsComplete: boolean
+  assignedPosition: string
+  banIntentSquarePortratPath: string
+  cellId: number
+  championIconStyle: string
+  championId: number
+  championName: string
+  currentChampionVotePercentInteger: number
+  isActingNow: boolean
+  isDonePicking: boolean
+  isOnPlayersTeam: boolean
+  isPickIntenting: boolean
+  isPlaceholder: boolean
+  isSelf: boolean
+  nameVisibilityType: 'HIDDEN' | 'PUBLIC' | (string & {})
+  obfuscatedPuuid: string
+  obfuscatedSummonerId: number
+  pickSnipedClass: string
+  puuid: string
+  shouldShowActingBar: boolean
+  shouldShowBanIntentIcon: boolean
+  shouldShowExpanded: boolean
+  shouldShowRingAnimations: boolean
+  shouldShowSelectedSkin: boolean
+  shouldShowSpells: boolean
+  showMuted: boolean
+  showSwaps: boolean
+  showTrades: boolean
+  skinId: number
+  skinSplashPath: string
+  slotId: number
+  spell1IconPath: string
+  spell2IconPath: string
+  statusMessageKey: string
+  summonerId: number
+  swapId: number
+  tradeId: number
 }
 
 /** 英雄选择操作 */

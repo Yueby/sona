@@ -19,8 +19,10 @@ import { updateUnlockStatus } from '@/lib/features/unlock-status'
 import { updateBenchNoCooldown } from '@/lib/features/bench-no-cooldown'
 import { updateGlobalParticle } from '@/lib/features/global-particle'
 import { updateFriendSmartGroup } from '@/lib/features/friend-smart-group'
+import { updateEnhancedFriendGameStatus } from '@/lib/features/enhanced-friend-game-status'
 import { updateAutoHonor } from '@/lib/features/auto-honor'
 import { updateAutoLockChampion } from '@/lib/features/auto-lock-champion'
+import { updateAutoBanChampion } from '@/lib/features/auto-ban-champion'
 import { applyRankDisguise, updateRankDisguise } from '@/lib/features/rank-disguise'
 import { updateCustomProfileBg } from '@/lib/features/profile-background'
 import { updateCustomBanner } from '@/lib/features/custom-banner'
@@ -771,6 +773,9 @@ export function initFeatures() {
   updateFriendSmartGroup(store.get('friendSmartGroup'))
   store.onChange('friendSmartGroup', updateFriendSmartGroup)
 
+  updateEnhancedFriendGameStatus(store.get('enhancedFriendGameStatus'))
+  store.onChange('enhancedFriendGameStatus', updateEnhancedFriendGameStatus)
+
   updateCustomProfileBg(store.get('customProfileBg'))
   store.onChange('customProfileBg', updateCustomProfileBg)
 
@@ -790,6 +795,9 @@ export function initFeatures() {
 
   updateAutoLockChampion(store.get('autoLockChampion'))
   store.onChange('autoLockChampion', updateAutoLockChampion)
+
+  updateAutoBanChampion(store.get('autoBanChampion'))
+  store.onChange('autoBanChampion', updateAutoBanChampion)
 
   updateBalanceBuffTooltip(store.get('balanceBuffTooltip'))
   store.onChange('balanceBuffTooltip', updateBalanceBuffTooltip)
