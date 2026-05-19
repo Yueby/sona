@@ -332,7 +332,7 @@ export function DebugPage() {
 
       <SettingGroup title="美化客户端相关">
         <p className="sona-subtitle">
-          测试客户端环境能否通过文件选择器读取本地图片；当前仅用于预览，不会写入磁盘或修改头像。
+          测试客户端环境能否通过文件选择器读取本地图片；当前仅用于预览，不会写入磁盘或修改头像。也可以打开 assets 目录，手动放入自定义图片。
         </p>
         <input
           ref={beautifyImageInputRef}
@@ -347,6 +347,9 @@ export function DebugPage() {
         <div className="sona-debug-actions">
           <SonaButton variant="primary" onClick={() => beautifyImageInputRef.current?.click()}>
             选择图片
+          </SonaButton>
+          <SonaButton onClick={() => window.openPluginsFolder('sona/assets')}>
+            打开 assets 目录
           </SonaButton>
           {beautifyImagePreview && (
             <SonaButton variant="secondary" onClick={() => setBeautifyImagePreview(null)}>

@@ -59,6 +59,27 @@ export function GamepadIcon() {
   )
 }
 
+export function PaletteIcon() {
+  return (
+    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      {/* 优化了贝塞尔曲线，边缘更丝滑 */}
+      <path d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10c.926 0 1.648-.746 1.648-1.688 0-.437-.18-.836-.437-1.124L12 18c-.315-.315-.588-.753-.588-1.5 0-1.042.847-1.5 1.5-1.5h1.272a6 6 0 0 0 6.05-5.012C20.673 5.378 16.653 2 12 2Z" />
+      {/* 改为空心圆（颜料槽），视觉更统一 */}
+      <circle cx="13.5" cy="6.5" r="1.5" />
+      <circle cx="17.5" cy="10.5" r="1.5" />
+      <circle cx="8.5" cy="7.5" r="1.5" />
+      <circle cx="6.5" cy="12.5" r="1.5" />
+    </svg>
+  )
+}
+
 export function InfoIcon() {
   return (
     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">

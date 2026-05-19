@@ -5,11 +5,12 @@ import { Modal } from '@/components/ui/Modal'
 import { Sidebar, type SidebarItem } from '@/components/ui/Sidebar'
 import { HomePage } from '@/components/pages/HomePage'
 import { ToolsPage } from '@/components/pages/ToolsPage'
+import { BeautifyPage } from '@/components/pages/BeautifyPage'
 import { SettingsPage } from '@/components/pages/SettingsPage'
 import { AboutPage } from '@/components/pages/AboutPage'
 import { DebugPage } from '@/components/pages/DebugPage'
 import { UpdatePage } from '@/components/pages/UpdatePage'
-import { HomeIcon, GamepadIcon, SettingsIcon, InfoIcon, BugIcon, ZapIcon } from '@/components/ui/icons'
+import { HomeIcon, GamepadIcon, PaletteIcon, SettingsIcon, InfoIcon, BugIcon, ZapIcon } from '@/components/ui/icons'
 import { onModalVisibilityChange, isModalVisible, closeModal } from '@/lib/modal'
 import { store } from '@/lib/store'
 import { getUpdateState, onUpdateStateChange, type UpdateState } from '@/lib/update-checker'
@@ -17,6 +18,7 @@ import { getUpdateState, onUpdateStateChange, type UpdateState } from '@/lib/upd
 const baseSidebarItems: SidebarItem[] = [
   { id: 'home', icon: <HomeIcon />, label: '主页' },
   { id: 'tools', icon: <GamepadIcon />, label: '工具' },
+  { id: 'beautify', icon: <PaletteIcon />, label: '美化' },
   { id: 'settings', icon: <SettingsIcon />, label: '设置' },
   { id: 'about', icon: <InfoIcon />, label: '关于' },
 ]
@@ -37,6 +39,8 @@ function PageContent({ pageId }: { pageId: string }) {
       return <HomePage />
     case 'tools':
       return <ToolsPage />
+    case 'beautify':
+      return <BeautifyPage />
     case 'settings':
       return <SettingsPage />
     case 'about':

@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type ReactNode } from 'react'
+import { useEffect, useRef, useState, type MouseEvent, type ReactNode } from 'react'
 import { createPortal } from 'react-dom'
 import '@/styles/Modal.css'
 
@@ -31,6 +31,7 @@ export function Modal({
   const dialogRef = useRef<HTMLDivElement>(null)
   const overlayRef = useRef<HTMLDivElement>(null)
   const canvasRef = useRef<HTMLCanvasElement>(null)
+  const mouseDownOnOverlayRef = useRef(false)
   const [mounted, setMounted] = useState(false)
   const [closing, setClosing] = useState(false)
 
@@ -183,13 +184,29 @@ export function Modal({
   const overlayClass = `sona-modal-overlay${closing ? ' sona-modal-closing' : ''}`
   const dialogClass = `sona-modal-dialog${closing ? ' sona-modal-closing' : ''}`
 
+  const handleOverlayMouseDown = (e: MouseEvent<HTMLDivElement>) => {
+    mouseDownOnOverlayRef.current = e.target === e.currentTarget
+    e.stopPropagation()
+  }
+
+  const handleOverlayMouseUp = (e: MouseEvent<HTMLDivElement>) => {
+    const shouldClose = maskClosable
+      && mouseDownOnOverlayRef.current
+      && e.target === e.currentTarget
+
+    mouseDownOnOverlayRef.current = false
+    e.stopPropagation()
+
+    if (shouldClose) onClose()
+  }
+
   return createPortal(
     <div
       ref={overlayRef}
       className={overlayClass}
-      onClick={maskClosable ? onClose : undefined}
-      onMouseDown={(e) => e.stopPropagation()}
-      onMouseUp={(e) => e.stopPropagation()}
+      onClick={(e) => e.stopPropagation()}
+      onMouseDown={handleOverlayMouseDown}
+      onMouseUp={handleOverlayMouseUp}
     >
       <div
         ref={dialogRef}
