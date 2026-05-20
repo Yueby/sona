@@ -95,6 +95,8 @@ export interface SonaStrengthScoreOptions {
   trimOutliers: boolean
   /** 早期投降局数据不完整，默认跳过。 */
   skipEarlySurrender: boolean
+  /** 有挂机队友的对局会明显污染表现数据，默认跳过。 */
+  skipAfkTeammate: boolean
 }
 
 type BreakdownKey = keyof SonaScoreBreakdown
@@ -113,6 +115,7 @@ const DEFAULT_OPTIONS: SonaStrengthScoreOptions = {
   fullConfidenceGames: 16,
   trimOutliers: true,
   skipEarlySurrender: true,
+  skipAfkTeammate: true,
 }
 
 const BASE_WEIGHTS: ScoreWeights = {
@@ -205,7 +208,7 @@ export function calculateSonaGameStrengthScore(
     return null
   }
 
-  if (resolvedOptions.skipEarlySurrender && (participant.gameEndedInEarlySurrender || participant.teamEarlySurrendered)) {
+  if (shouldSkipSonaGameForParticipant(game, participant, resolvedOptions)) {
     return null
   }
 
@@ -281,6 +284,17 @@ export function calculateSonaGameStrengthScore(
       visionPerMinute,
     },
   }
+}
+
+export function shouldSkipSonaStrengthGame(
+  game: SgpGameSummaryLol,
+  puuid: string,
+  options: Partial<SonaStrengthScoreOptions> = {},
+): boolean {
+  const participant = game.json.participants.find((item) => item.puuid === puuid)
+  if (!participant) return true
+
+  return shouldSkipSonaGameForParticipant(game, participant, { ...DEFAULT_OPTIONS, ...options })
 }
 
 export function calculateSonaTeamStrengthScore(
@@ -621,6 +635,35 @@ function sum<T>(values: T[], mapper: (value: T) => number): number {
 function getChallengeNumber(participant: SgpParticipantLol, key: string): number {
   const value = participant.challenges?.[key]
   return typeof value === 'number' && Number.isFinite(value) ? value : 0
+}
+
+function getChallengeFlag(participant: SgpParticipantLol, key: string): boolean {
+  const value = participant.challenges?.[key] as unknown
+  return value === true || (typeof value === 'number' && value > 0)
+}
+
+function shouldSkipSonaGameForParticipant(
+  game: SgpGameSummaryLol,
+  participant: SgpParticipantLol,
+  options: SonaStrengthScoreOptions,
+): boolean {
+  if (options.skipEarlySurrender && (participant.gameEndedInEarlySurrender || participant.teamEarlySurrendered)) {
+    return true
+  }
+
+  return options.skipAfkTeammate && hasAfkTeammate(game, participant)
+}
+
+function hasAfkTeammate(game: SgpGameSummaryLol, participant: SgpParticipantLol): boolean {
+  if (getChallengeFlag(participant, 'hadAfkTeammate')) {
+    return true
+  }
+
+  return game.json.participants.some((item) => {
+    return item.teamId === participant.teamId
+      && item.puuid !== participant.puuid
+      && getChallengeFlag(item, 'hadAfkTeammate')
+  })
 }
 
 function scoreRange(value: number, zeroAt: number, fullAt: number): number {

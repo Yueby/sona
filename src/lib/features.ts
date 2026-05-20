@@ -32,7 +32,7 @@ import { updateAutoReturnToLobby } from '@/lib/features/auto-return-to-lobby'
 import { updateOpggBuildRecommendation } from '@/lib/features/opgg-build-recommendation'
 import { preloadChampSelectTierBadgeData, updateChampSelectTierBadge } from '@/lib/features/champselect-tier-badge'
 import { setAvailabilityHijackEnabled, setHideTFTEnabled, setHideRightNavTextEnabled } from '@/lib/injections'
-import { calculateSonaPlayerStrengthScore, type SonaPlayerStrengthScore } from '@/lib/player-strength-score'
+import { calculateSonaPlayerStrengthScore, shouldSkipSonaStrengthGame, type SonaPlayerStrengthScore } from '@/lib/player-strength-score'
 
 // ==================== 共享：查询队友胜率 ====================
 
@@ -154,6 +154,7 @@ async function _doFetchTeamStats(): Promise<TeamStatsResult> {
       for (const game of games) {
         const p = game.json.participants.find((pt) => pt.puuid === puuid)
         if (!p) continue
+        if (shouldSkipSonaStrengthGame(game, puuid)) continue
 
         matchStats.push({
           kills: p.kills,

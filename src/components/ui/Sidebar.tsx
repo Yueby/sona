@@ -2,6 +2,8 @@ import { type ReactNode } from 'react'
 import { MusicIcon, ChevronLeftIcon, ChevronRightIcon } from '@/components/ui/icons'
 import '@/styles/Sidebar.css'
 
+declare const __PLUGIN_VERSION__: string
+
 export interface SidebarItem {
   id: string
   icon: ReactNode
@@ -22,7 +24,12 @@ export function Sidebar({ items, activeId, onSelect, collapsed, onToggle }: Side
       {/* Logo 区域 */}
       <div className="sona-sidebar-logo">
         <span className="sona-sidebar-logo-icon"><MusicIcon /></span>
-        {!collapsed && <span className="sona-sidebar-logo-text">Sona</span>}
+        {!collapsed && (
+          <span className="sona-sidebar-logo-title">
+            <span className="sona-sidebar-logo-text">Sona</span>
+            <span className="sona-sidebar-logo-version">v{__PLUGIN_VERSION__}</span>
+          </span>
+        )}
       </div>
 
       {/* 导航项 */}

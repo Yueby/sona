@@ -6,6 +6,7 @@ import { lcu, queueIdToTag } from '@/lib/lcu'
 import { store } from '@/lib/store'
 import { getChampIcon } from '@/lib/assets'
 import { getRating } from '@/lib/features'
+import { shouldSkipSonaStrengthGame } from '@/lib/player-strength-score'
 import type { GameflowTeamPlayer, PlayerChampionSelection } from '@/types/lcu'
 import '@/styles/GameAnalysisModal.css'
 
@@ -309,11 +310,13 @@ export function GameAnalysisModal({ open, onClose, mockData }: GameAnalysisModal
             }
 
             const games = sgpResp.games
-            let wins = 0, totalK = 0, totalD = 0, totalA = 0
+            let total = 0, wins = 0, totalK = 0, totalD = 0, totalA = 0
             const recentGames: RecentGame[] = []
             for (const game of games) {
               const participant = game.json.participants.find(pt => pt.puuid === p.puuid)
               if (!participant) continue
+              if (shouldSkipSonaStrengthGame(game, p.puuid)) continue
+              total++
               if (participant.win) wins++
               totalK += participant.kills
               totalD += participant.deaths
@@ -329,7 +332,9 @@ export function GameAnalysisModal({ open, onClose, mockData }: GameAnalysisModal
               }
             }
 
-            const total = games.length
+            if (total === 0) {
+              return { ...placeholder, summonerName, rankText, rankColor, rating: '' }
+            }
             const winRate = total > 0 ? (wins / total) * 100 : 0
             const kdaNum = totalD === 0 ? totalK + totalA : (totalK + totalA) / totalD
 

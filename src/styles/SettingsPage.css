@@ -98,6 +98,236 @@
   background: rgba(0, 0, 0, 0.25);
 }
 
+.sona-asset-browser {
+  padding: 14px;
+  background: rgba(1, 10, 19, 0.35);
+  border: 1px solid rgba(200, 170, 110, 0.14);
+  border-radius: 4px;
+}
+
+.sona-asset-browser-header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 8px;
+}
+
+.sona-asset-browser-title {
+  color: #c8aa6e;
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+}
+
+.sona-asset-browser-hint {
+  color: #785a28;
+  font-size: 11px;
+  line-height: 1.5;
+  text-align: right;
+}
+
+.sona-asset-browser-status {
+  margin: 0;
+  color: #a09b8c;
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.sona-asset-path-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 360px;
+}
+
+.sona-asset-path-row .sona-input {
+  flex: 1;
+  min-width: 0;
+}
+
+.sona-asset-path-row .sona-btn {
+  flex-shrink: 0;
+  min-width: 72px;
+  white-space: nowrap;
+}
+
+.sona-asset-empty {
+  margin: 10px 0 0;
+  color: #785a28;
+  font-size: 12px;
+}
+
+.sona-asset-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+  gap: 10px;
+  margin-top: 12px;
+}
+
+.sona-asset-card {
+  position: relative;
+  min-width: 0;
+  padding: 8px;
+  background: rgba(30, 35, 40, 0.4);
+  border: 1px solid rgba(200, 170, 110, 0.1);
+  border-radius: 4px;
+  cursor: grab;
+  transition: transform 0.18s ease, border-color 0.18s ease, background 0.18s ease;
+}
+
+.sona-asset-card:hover {
+  transform: translateY(-2px);
+  border-color: rgba(200, 170, 110, 0.28);
+  background: rgba(30, 35, 40, 0.58);
+}
+
+.sona-asset-card:active {
+  cursor: grabbing;
+}
+
+.sona-asset-card img {
+  display: block;
+  width: 100%;
+  height: 86px;
+  object-fit: contain;
+  background: rgba(0, 0, 0, 0.24);
+  border: 1px solid rgba(120, 90, 40, 0.28);
+}
+
+.sona-asset-card span {
+  display: block;
+  margin-top: 8px;
+  color: #a09b8c;
+  font-size: 11px;
+  line-height: 1.4;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.sona-asset-card-remove {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  border: 1px solid rgba(200, 170, 110, 0.12);
+  border-radius: 3px;
+  background: rgba(1, 10, 19, 0.78);
+  color: #a09b8c;
+  line-height: 20px;
+  cursor: pointer;
+  opacity: 0;
+  transition: opacity 0.15s ease, background 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+}
+
+.sona-asset-card:hover .sona-asset-card-remove {
+  opacity: 1;
+}
+
+.sona-asset-card-remove:hover {
+  background: rgba(190, 64, 64, 0.32);
+  border-color: rgba(190, 64, 64, 0.5);
+  color: #f0e6d2;
+}
+
+.sona-avatar-dropzone {
+  min-height: 150px;
+  padding: 14px;
+  background:
+    linear-gradient(135deg, rgba(200, 170, 110, 0.06), transparent 32%),
+    rgba(1, 10, 19, 0.35);
+  border: 1px dashed rgba(200, 170, 110, 0.3);
+  border-radius: 4px;
+  transition: border-color 0.18s ease, background 0.18s ease;
+}
+
+.sona-avatar-dropzone:hover {
+  border-color: rgba(200, 170, 110, 0.5);
+  background:
+    linear-gradient(135deg, rgba(200, 170, 110, 0.09), transparent 36%),
+    rgba(9, 20, 40, 0.45);
+}
+
+.sona-avatar-dropzone--empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.sona-avatar-dropzone-placeholder {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  color: #a09b8c;
+  font-size: 12px;
+  line-height: 1.6;
+  text-align: center;
+}
+
+.sona-avatar-dropzone-plus {
+  width: 42px;
+  height: 42px;
+  border: 1px solid rgba(200, 170, 110, 0.38);
+  border-radius: 50%;
+  color: #c8aa6e;
+  font-size: 28px;
+  line-height: 38px;
+  text-align: center;
+  background: rgba(30, 35, 40, 0.45);
+}
+
+.sona-avatar-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(112px, 1fr));
+  gap: 10px;
+}
+
+.sona-avatar-card {
+  position: relative;
+  min-width: 0;
+  padding: 8px;
+  background: rgba(30, 35, 40, 0.44);
+  border: 1px solid rgba(200, 170, 110, 0.16);
+  border-radius: 4px;
+  transition: transform 0.18s ease, border-color 0.18s ease, background 0.18s ease;
+}
+
+.sona-avatar-card:hover {
+  transform: translateY(-2px);
+  border-color: rgba(200, 170, 110, 0.34);
+  background: rgba(30, 35, 40, 0.62);
+}
+
+.sona-avatar-card:hover .sona-asset-card-remove {
+  opacity: 1;
+}
+
+.sona-avatar-card img {
+  display: block;
+  width: 100%;
+  aspect-ratio: 1;
+  object-fit: cover;
+  border: 1px solid rgba(120, 90, 40, 0.36);
+  border-radius: 50%;
+  background: rgba(0, 0, 0, 0.24);
+}
+
+.sona-avatar-card span {
+  display: block;
+  margin-top: 8px;
+  color: #a09b8c;
+  font-size: 11px;
+  line-height: 1.4;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  text-align: center;
+}
+
 /* ---- 英雄联想下拉 ---- */
 .sona-champ-suggest {
   position: absolute;

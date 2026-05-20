@@ -5,7 +5,7 @@ import { MatchHistoryModal } from '@/components/ui/MatchHistoryModal'
 import { injector } from '@/lib/InjectorManager'
 import { lcu, LcuEventUri, queueIdToTag } from '@/lib/lcu'
 import type { LCUEventMessage, Lobby } from '@/lib/lcu'
-import { calculateSonaPlayerStrengthScore } from '@/lib/player-strength-score'
+import { calculateSonaPlayerStrengthScore, shouldSkipSonaStrengthGame } from '@/lib/player-strength-score'
 import { store } from '@/lib/store'
 
 const SONA_LOBBY_HISTORY_ATTR = 'data-sona-lobby-history'
@@ -157,6 +157,7 @@ async function doRefreshLobbyMemberStats() {
       for (const game of games) {
         const participant = game.json.participants.find((item) => item.puuid === member.puuid)
         if (!participant) continue
+        if (shouldSkipSonaStrengthGame(game, member.puuid)) continue
         total++
         if (participant.win) wins++
         kills += participant.kills

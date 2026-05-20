@@ -12,6 +12,7 @@ import { injector } from '@/lib/InjectorManager'
 import { createElement } from 'react'
 import { flushSync } from 'react-dom'
 import { createRoot, type Root } from 'react-dom/client'
+import { Modal } from '@/components/ui/Modal'
 import { getAllChampions, getAugmentInfo, getChampionById, getQueue, getQueueName } from '@/lib/assets'
 import { OpggBuildRecommendationPanel, type BuildRecommendation, type RecommendationContext } from '@/components/ui/OpggBuildRecommendationPanel'
 import { lcu, LcuEventUri, type ChampSelectSession, type ItemSet, type ItemSetBlock, type LCUEventMessage, type RunePage, type RunePagePayload } from '@/lib/lcu'
@@ -33,6 +34,7 @@ import type { GameflowPhase } from '@/types/lcu'
 const TARGET_SELECTOR = '.toggle-ability-previews-button'
 const HIJACK_ATTR = 'data-sona-opgg-build-hijacked'
 const PANEL_ID = 'sona-opgg-build-panel'
+const IN_GAME_BUILD_BUTTON_ATTR = 'data-sona-opgg-ingame-build'
 const DEFAULT_OPGG_TIER: OpggTier = 'master_plus'
 const SONA_ITEM_SET_TITLE_PREFIX = '[Sona]'
 const HEALTH_POTION_ID = 2003
@@ -77,6 +79,7 @@ let runePagesUnsub: (() => void) | null = null
 let championLockPollTimer: number | null = null
 let championLockPollAttempts = 0
 let injectRegistered = false
+let inGameBuildButtonRegistered = false
 let currentContext: RecommendationContext = {
   championId: 0,
   queueId: 0,
@@ -90,6 +93,9 @@ const recommendationCache = new Map<string, RecommendationCacheEntry>()
 let outsideCloseHandler: ((event: MouseEvent) => void) | null = null
 let activePanelKey = ''
 let panelReactRoot: Root | null = null
+let inGameModalRoot: Root | null = null
+let inGameModalContainer: HTMLDivElement | null = null
+let inGameModalRenderToken = 0
 let lastAppliedItemSetKey = ''
 let lastAppliedRuneKey = ''
 let lastAppliedSpellKey = ''
@@ -124,7 +130,10 @@ function isLocalChampionLocked(session: ChampSelectSession): boolean {
     return true
   }
 
-  return localPickActions.some((action) => action.completed && action.championId === localPlayer.championId)
+  // ARAM/KIWI can swap champions after the pick action is completed. In that case
+  // the completed action may still point to the originally locked champion, while
+  // localPlayer.championId has already changed to the swapped champion.
+  return localPickActions.some((action) => action.completed)
 }
 
 function mapAssignedPosition(position: string | undefined): OpggPosition {
@@ -1085,6 +1094,145 @@ function closePanel() {
   }
 }
 
+function closeInGameBuildRecommendationModal() {
+  if (!inGameModalRoot) return
+
+  const close = () => closeInGameBuildRecommendationModal()
+  inGameModalRoot.render(
+    createElement(Modal, {
+      open: false,
+      onClose: close,
+      width: 1120,
+      height: 700,
+      closable: false,
+      children: createElement('div'),
+    }),
+  )
+
+  window.setTimeout(() => {
+    if (inGameModalRoot) {
+      inGameModalRoot.unmount()
+      inGameModalRoot = null
+    }
+    if (inGameModalContainer) {
+      inGameModalContainer.remove()
+      inGameModalContainer = null
+    }
+  }, 240)
+}
+
+function cleanupInGameBuildRecommendationModal() {
+  if (inGameModalRoot) {
+    inGameModalRoot.unmount()
+    inGameModalRoot = null
+  }
+  if (inGameModalContainer) {
+    inGameModalContainer.remove()
+    inGameModalContainer = null
+  }
+}
+
+function renderInGameBuildRecommendationModal(
+  context: RecommendationContext,
+  cacheEntry: RecommendationCacheEntry | null,
+  token: number,
+) {
+  if (!inGameModalContainer) {
+    inGameModalContainer = document.createElement('div')
+    inGameModalContainer.id = 'sona-opgg-ingame-modal-root'
+    document.body.appendChild(inGameModalContainer)
+    inGameModalRoot = createRoot(inGameModalContainer)
+  }
+
+  const recommendation = cacheEntry?.data ?? null
+  const loadError = cacheEntry?.error ?? ''
+  const isLoading = Boolean(cacheEntry && cacheEntry.data === undefined && !cacheEntry.error)
+  const close = () => closeInGameBuildRecommendationModal()
+  const handleTierChange = (tier: OpggTier) => {
+    const nextTier = normalizeOpggTier(tier)
+    store.set('opggBuildRecommendationTier', nextTier)
+    recommendationCache.delete(getRecommendationCacheKey(context))
+    const nextEntry = ensureRecommendationPrefetch(context)
+    const nextToken = ++inGameModalRenderToken
+    renderInGameBuildRecommendationModal(context, nextEntry, nextToken)
+    scheduleInGameModalRefresh(context, nextEntry, nextToken)
+  }
+
+  inGameModalRoot!.render(
+    createElement(Modal, {
+      open: true,
+      onClose: close,
+      width: 1120,
+      height: 700,
+      closable: false,
+      children: createElement('div', { className: 'sona-opgg-modal-content' },
+        createElement(OpggBuildRecommendationPanel, {
+          context,
+          recommendation,
+          loadError,
+          isLoading,
+          selectedTier: getSelectedOpggTier(),
+          onTierChange: handleTierChange,
+          onClose: close,
+        }),
+      ),
+    }),
+  )
+
+  scheduleInGameModalRefresh(context, cacheEntry, token)
+}
+
+function scheduleInGameModalRefresh(
+  context: RecommendationContext,
+  cacheEntry: RecommendationCacheEntry | null,
+  token: number,
+) {
+  if (!cacheEntry || cacheEntry.data !== undefined || cacheEntry.error) return
+
+  cacheEntry.promise.then(() => {
+    if (token !== inGameModalRenderToken || !inGameModalRoot) return
+    renderInGameBuildRecommendationModal(context, cacheEntry, token)
+  }).catch(() => {
+    if (token !== inGameModalRenderToken || !inGameModalRoot) return
+    renderInGameBuildRecommendationModal(context, cacheEntry, token)
+  })
+}
+
+async function resolveInGameRecommendationContext(): Promise<RecommendationContext> {
+  const [session, summoner] = await Promise.all([
+    lcu.getGameflowSession(),
+    lcu.getSummonerInfo(),
+  ])
+
+  const selection = session.gameData?.playerChampionSelections?.find((item) => item.puuid === summoner.puuid)
+  const players = [
+    ...(session.gameData?.teamOne ?? []),
+    ...(session.gameData?.teamTwo ?? []),
+  ]
+  const player = players.find((item) => item.puuid === summoner.puuid || item.obfuscatedPuuid === summoner.puuid)
+  const championId = selection?.championId || player?.championId || currentContext.championId
+
+  if (!championId) {
+    throw new Error('无法识别当前英雄')
+  }
+
+  return {
+    championId,
+    queueId: session.gameData?.queue?.id ?? currentContext.queueId,
+    gameVersion: currentContext.gameVersion || await lcu.getGameVersion().catch(() => ''),
+    gameMode: session.gameData?.queue?.gameMode || session.map?.gameMode || currentContext.gameMode,
+    position: mapAssignedPosition(player?.selectedPosition || player?.selectedRole || currentContext.position),
+  }
+}
+
+export async function showOpggBuildRecommendationModal() {
+  const context = await resolveInGameRecommendationContext()
+  currentContext = { ...context }
+  const cacheEntry = ensureRecommendationPrefetch(context)
+  const token = ++inGameModalRenderToken
+  renderInGameBuildRecommendationModal(context, cacheEntry, token)
+}
+
 async function openRecommendationPanel(anchor: HTMLElement, contextOverride?: RecommendationContext) {
   if (contextOverride) {
     currentContext = { ...contextOverride }
@@ -1277,6 +1425,57 @@ function tryHijackAbilityPreviewPanel(): boolean {
   return true
 }
 
+function tryInjectInGameBuildButton(): boolean {
+  const container = document.querySelector('.game-in-progress-container')
+  if (!container) return false
+
+  if (container.querySelector(`[${IN_GAME_BUILD_BUTTON_ATTR}]`)) return true
+
+  const btn = document.createElement('lol-uikit-flat-button')
+  btn.setAttribute(IN_GAME_BUILD_BUTTON_ATTR, 'true')
+  btn.textContent = '配装推荐'
+  btn.style.display = 'block'
+  btn.style.marginTop = '12px'
+
+  btn.addEventListener('click', (event) => {
+    event.stopPropagation()
+    event.preventDefault()
+    showOpggBuildRecommendationModal().catch((err) => {
+      logger.warn('[OPGG] 游戏内配装推荐弹窗打开失败:', err)
+      if (typeof Toast !== 'undefined') {
+        Toast.error('配装推荐打开失败，请稍后再试')
+      }
+    })
+  })
+
+  const gameAnalysisBtn = container.querySelector('[data-sona-game-analysis]')
+  if (gameAnalysisBtn?.parentElement === container) {
+    gameAnalysisBtn.insertAdjacentElement('afterend', btn)
+  } else {
+    container.appendChild(btn)
+  }
+
+  logger.info('[OPGG] 游戏内配装推荐按钮已注入 ✓')
+  return true
+}
+
+function registerInGameBuildButton() {
+  if (inGameBuildButtonRegistered) return
+
+  injector.register(tryInjectInGameBuildButton)
+  inGameBuildButtonRegistered = true
+}
+
+function unregisterInGameBuildButton() {
+  if (inGameBuildButtonRegistered) {
+    injector.unregister(tryInjectInGameBuildButton)
+    inGameBuildButtonRegistered = false
+  }
+
+  document.querySelectorAll(`[${IN_GAME_BUILD_BUTTON_ATTR}]`).forEach((element) => element.remove())
+  cleanupInGameBuildRecommendationModal()
+}
+
 function mount() {
   if (!injectRegistered) {
     injector.register(tryHijackAbilityPreviewPanel)
@@ -1335,9 +1534,14 @@ function startOpggListeners() {
   phaseUnsub = lcu.observe(LcuEventUri.GAMEFLOW_PHASE_CHANGE, (event: LCUEventMessage) => {
     const phase = event.data as GameflowPhase
     if (phase === 'ChampSelect') {
+      unregisterInGameBuildButton()
       logger.info('[OPGG] 进入 ChampSelect，等待本地英雄锁定')
       scheduleRefreshWhenChampionLocked()
+    } else if (phase === 'InProgress') {
+      unmount()
+      registerInGameBuildButton()
     } else {
+      unregisterInGameBuildButton()
       unmount()
     }
   })
@@ -1358,6 +1562,8 @@ function startOpggListeners() {
   lcu.getGameflowPhase().then((phase) => {
     if (phase === 'ChampSelect') {
       scheduleRefreshWhenChampionLocked()
+    } else if (phase === 'InProgress') {
+      registerInGameBuildButton()
     }
   }).catch(() => { /* ignore */ })
 
@@ -1371,6 +1577,8 @@ export function updateOpggBuildRecommendation(enabled: boolean) {
     lcu.getGameflowPhase().then((phase) => {
       if (phase === 'ChampSelect') {
         scheduleRefreshWhenChampionLocked()
+      } else if (phase === 'InProgress') {
+        registerInGameBuildButton()
       }
     }).catch(() => { /* ignore */ })
   } else if (!enabled) {
@@ -1378,6 +1586,7 @@ export function updateOpggBuildRecommendation(enabled: boolean) {
 
     phaseUnsub()
     phaseUnsub = null
+    unregisterInGameBuildButton()
     if (champSelectUnsub) {
       champSelectUnsub()
       champSelectUnsub = null

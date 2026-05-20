@@ -90,6 +90,10 @@ export interface SonaConfig {
   sideIndicatorMsgType: string
   /** 全局粒子美化效果 */
   globalParticle: boolean
+  /** 美化资源：用户手动录入的 assets 相对路径列表 */
+  beautifyAssetPaths: string[]
+  /** 自定义头像资源：从美化资源区复制引用的 assets 相对路径列表 */
+  customAvatarAssetPaths: string[]
   /** 好友智能分组（开黑好友用同样颜色的border-right展示） */
   friendSmartGroup: boolean
   /** 增强游戏中好友状态（显示模式、英雄和实时对局时长） */
@@ -181,6 +185,8 @@ const DEFAULT_CONFIG: SonaConfig = {
   sideIndicator: false,
   sideIndicatorMsgType: 'celebration',
   globalParticle: false,
+  beautifyAssetPaths: [],
+  customAvatarAssetPaths: [],
   friendSmartGroup: false,
   enhancedFriendGameStatus: true,
   lobbyEnhancement: true,

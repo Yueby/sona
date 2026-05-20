@@ -10,6 +10,18 @@
   color: #a09b8c;
 }
 
+.sona-opgg-modal-content {
+  height: 100%;
+  min-height: 0;
+}
+
+.sona-opgg-modal-content .sobp {
+  height: 100%;
+  max-height: none;
+  border: 0;
+  box-shadow: none;
+}
+
 .sobp-body::-webkit-scrollbar {
   width: 8px;
 }
