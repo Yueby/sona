@@ -118,6 +118,8 @@ export interface SonaConfig {
   } | null
   /** 隐藏客户端云顶之弈入口 */
   hideTFT: boolean
+  /** 隐藏的玩家对战游戏模式（key 为 data-game-mode 值，true 表示隐藏） */
+  hiddenGameModes: Record<string, boolean>
   /** 隐藏主页右侧导航栏文字（仅保留图标） */
   hideRightNavText: boolean
   /** 对局结束自动点赞 */
@@ -192,6 +194,7 @@ const DEFAULT_CONFIG: SonaConfig = {
   lobbyEnhancement: true,
   lobbyEnhancementFetchCount: 50,
   hideTFT: false,
+  hiddenGameModes: {},
   hideRightNavText: false,
   customProfileBg: false,
   ignoreProfilePrivacy: true,

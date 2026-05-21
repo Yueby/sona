@@ -17,6 +17,7 @@ import { installAdBlockXhrRules } from '@/lib/xhr'
 import '@/styles/index.css'
 import '@/styles/inject.css'
 import '@/styles/availabilityMenu.css'
+import '@/styles/gameModeFilter.css'
 
 const PLUGIN_NAME = 'Sona'
 const PLUGIN_VERSION = __PLUGIN_VERSION__

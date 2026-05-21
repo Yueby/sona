@@ -1,0 +1,76 @@
+/* Sona Game Mode Filter - 玩家对战模式可见性勾选条 */
+
+.sona-game-mode-filter-bar {
+  display: flex;
+  flex-direction: row;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+  padding: 6px 16px;
+  margin-top: 4px;
+  border-top: 1px solid rgba(120, 90, 40, 0.35);
+}
+
+.sona-mode-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 26px;
+  padding: 0 10px 0 6px;
+  background: rgba(1, 10, 19, 0.55);
+  border: 1px solid rgba(120, 90, 40, 0.6);
+  border-radius: 4px;
+  cursor: pointer;
+  user-select: none;
+  transition:
+    background 0.15s ease,
+    border-color 0.15s ease,
+    opacity 0.15s ease,
+    transform 0.1s ease;
+}
+
+.sona-mode-chip:hover {
+  background: rgba(30, 35, 40, 0.8);
+  border-color: #c8aa6e;
+}
+
+.sona-mode-chip:active {
+  transform: scale(0.97);
+}
+
+/* 勾选态：显示该模式 */
+.sona-mode-chip--on {
+  background: rgba(200, 170, 110, 0.15);
+  border-color: #c8aa6e;
+  box-shadow: 0 0 6px rgba(200, 170, 110, 0.18);
+}
+
+/* 未勾选态：隐藏该模式 */
+.sona-mode-chip--off {
+  opacity: 0.55;
+}
+
+.sona-mode-chip--off:hover {
+  opacity: 0.85;
+}
+
+.sona-mode-chip__icon {
+  width: 20px;
+  height: 20px;
+  background-size: contain;
+  background-repeat: no-repeat;
+  background-position: center;
+  flex-shrink: 0;
+}
+
+.sona-mode-chip__name {
+  font-size: 11px;
+  line-height: 1;
+  font-family: inherit;
+  color: #a09b8c;
+  white-space: nowrap;
+}
+
+.sona-mode-chip--on .sona-mode-chip__name {
+  color: #f0e6d2;
+}
