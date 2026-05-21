@@ -251,18 +251,43 @@ function removeFilterBar() {
   document.getElementById(FILTER_BAR_ID)?.remove()
 }
 
+/** 把所有被我们打了 CARD_HIDDEN_ATTR 标记的卡片恢复显示 */
+function restoreAllCards() {
+  const hidden = document.querySelectorAll<HTMLElement>(`.game-type-card[${CARD_HIDDEN_ATTR}]`)
+  hidden.forEach((card) => {
+    card.style.display = ''
+    card.removeAttribute(CARD_HIDDEN_ATTR)
+  })
+}
+
 // ==================== 注册 ====================
 
 let registered = false
+let storeUnsub: (() => void) | null = null
 
-/** 启动游戏模式过滤功能（无总开关，始终启用） */
-export function initGameModeFilter() {
-  if (registered) return
-  registered = true
-  injector.register(tryInjectGameModeFilter)
-  // store 变化时立即刷新（虽然 toggleMode 已经主动调过一次，这里兜住外部修改）
-  store.onChange('hiddenGameModes', () => {
-    tryInjectGameModeFilter()
-  })
-  logger.info('[GameModeFilter] initialized ✓')
+/**
+ * 切换玩家对战模式过滤功能开关
+ * - 开启：注入勾选条 + 监听 hiddenGameModes 变化
+ * - 关闭：移除勾选条、恢复所有被隐藏的卡片、取消监听（hiddenGameModes 配置保留）
+ */
+export function updateGameModeFilter(enabled: boolean) {
+  if (enabled && !registered) {
+    registered = true
+    injector.register(tryInjectGameModeFilter)
+    // store 变化时立即刷新（虽然 toggleMode 已经主动调过一次，这里兜住外部修改）
+    storeUnsub = store.onChange('hiddenGameModes', () => {
+      tryInjectGameModeFilter()
+    })
+    logger.info('[GameModeFilter] enabled ✓')
+  } else if (!enabled && registered) {
+    registered = false
+    injector.unregister(tryInjectGameModeFilter)
+    if (storeUnsub) {
+      storeUnsub()
+      storeUnsub = null
+    }
+    removeFilterBar()
+    restoreAllCards()
+    logger.info('[GameModeFilter] disabled')
+  }
 }

@@ -151,6 +151,7 @@ export function ToolsPage() {
   const [benchNoCooldown, setBenchNoCooldown] = useState(store.get('benchNoCooldown'))
   const [hideTFT, setHideTFT] = useState(store.get('hideTFT'))
   const [hideRightNavText, setHideRightNavText] = useState(store.get('hideRightNavText'))
+  const [gameModeFilter, setGameModeFilter] = useState(store.get('gameModeFilter'))
   const [windowEffect, setWindowEffect] = useState(store.get('windowEffect'))
   const [champSelectAssist, setChampSelectAssist] = useState(store.get('champSelectAssist'))
   const [opggBuildRecommendation, setOpggBuildRecommendation] = useState(store.get('opggBuildRecommendation'))
@@ -208,6 +209,7 @@ export function ToolsPage() {
       store.onChange('unlockChromas', setUnlockChromas),
       store.onChange('benchNoCooldown', setBenchNoCooldown),
       store.onChange('hideTFT', setHideTFT),
+      store.onChange('gameModeFilter', setGameModeFilter),
       store.onChange('windowEffect', setWindowEffect),
       store.onChange('champSelectAssist', setChampSelectAssist),
       store.onChange('opggBuildRecommendation', setOpggBuildRecommendation),
@@ -785,6 +787,15 @@ export function ToolsPage() {
       </SettingGroup>
 
       <SettingGroup title="界面">
+        <SettingCard
+          title="模式过滤"
+          description="在主页玩家对战分页的导航栏右侧显示模式勾选框，可隐藏不常玩的游戏模式（如海克斯大乱斗、云顶之弈等）。"
+        >
+          <SonaSwitch
+            checked={gameModeFilter}
+            onChange={(v) => { setGameModeFilter(v); store.set('gameModeFilter', v) }}
+          />
+        </SettingCard>
         <SettingCard
           title="隐藏首页云顶之弈"
           description="隐藏顶部导航栏的云顶之弈入口。"

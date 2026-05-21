@@ -31,7 +31,7 @@ import { updateGameAnalysisPopup } from '@/lib/features/game-analysis-popup'
 import { updateAutoReturnToLobby } from '@/lib/features/auto-return-to-lobby'
 import { updateOpggBuildRecommendation } from '@/lib/features/opgg-build-recommendation'
 import { updateBeautifyCustomAvatar } from '@/lib/features/beautify-client/custom-avatar'
-import { initGameModeFilter } from '@/lib/features/game-mode-filter'
+import { updateGameModeFilter } from '@/lib/features/game-mode-filter'
 import { preloadChampSelectTierBadgeData, updateChampSelectTierBadge } from '@/lib/features/champselect-tier-badge'
 import { setAvailabilityHijackEnabled, setHideTFTEnabled, setHideRightNavTextEnabled } from '@/lib/injections'
 import { calculateSonaPlayerStrengthScore, shouldSkipSonaStrengthGame, type SonaPlayerStrengthScore } from '@/lib/player-strength-score'
@@ -840,8 +840,9 @@ export function initFeatures() {
   setHideRightNavTextEnabled(store.get('hideRightNavText'))
   store.onChange('hideRightNavText', setHideRightNavTextEnabled)
 
-  // 玩家对战模式可见性勾选条（始终启用）
-  initGameModeFilter()
+  // 玩家对战模式可见性勾选条
+  updateGameModeFilter(store.get('gameModeFilter'))
+  store.onChange('gameModeFilter', updateGameModeFilter)
 
   // 恢复窗口特效
   const savedEffect = store.get('windowEffect')
