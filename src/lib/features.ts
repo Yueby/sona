@@ -31,6 +31,7 @@ import { updateGameAnalysisPopup } from '@/lib/features/game-analysis-popup'
 import { updateAutoReturnToLobby } from '@/lib/features/auto-return-to-lobby'
 import { updateOpggBuildRecommendation } from '@/lib/features/opgg-build-recommendation'
 import { updateBeautifyCustomAvatar } from '@/lib/features/beautify-client/custom-avatar'
+import { initSocialSidebarGlass } from '@/lib/features/beautify-client/social-sidebar-glass'
 import { updateGameModeFilter } from '@/lib/features/game-mode-filter'
 import { preloadChampSelectTierBadgeData, updateChampSelectTierBadge } from '@/lib/features/champselect-tier-badge'
 import { setAvailabilityHijackEnabled, setHideTFTEnabled, setHideRightNavTextEnabled } from '@/lib/injections'
@@ -791,6 +792,8 @@ export function initFeatures() {
 
   updateBeautifyCustomAvatar()
   store.onChange('customAvatarAssetPaths', updateBeautifyCustomAvatar)
+
+  initSocialSidebarGlass()
 
   updateAutoHonor(store.get('autoHonor'))
   store.onChange('autoHonor', updateAutoHonor)
