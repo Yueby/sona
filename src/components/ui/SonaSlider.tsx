@@ -2,27 +2,36 @@ import '@/styles/SonaSlider.css'
 
 export interface SonaSliderProps {
   value: number
+  min: number
+  max: number
+  step?: number
+  label?: string
+  unit?: string
   onChange: (value: number) => void
-  min?: number
-  max?: number
 }
 
-export function SonaSlider({ value, onChange, min = 0, max = 100 }: SonaSliderProps) {
-  const percentage = ((value - min) / (max - min)) * 100
-
+export function SonaSlider({
+  value,
+  min,
+  max,
+  step = 1,
+  label,
+  unit = '',
+  onChange,
+}: SonaSliderProps) {
   return (
-    <div className="sona-slider">
+    <label className="sona-slider">
+      {label && <span className="sona-slider-label">{label}</span>}
       <input
+        className="sona-slider-input"
         type="range"
         min={min}
         max={max}
+        step={step}
         value={value}
-        onChange={(e) => onChange(Number(e.target.value))}
-        className="sona-slider-input"
+        onChange={(event) => onChange(Number(event.target.value))}
       />
-      <div className="sona-slider-track" />
-      <div className="sona-slider-fill" style={{ width: `${percentage}%` }} />
-      <div className="sona-slider-thumb" style={{ left: `calc(${percentage}% - 6px)` }} />
-    </div>
+      <span className="sona-slider-value">{value}{unit}</span>
+    </label>
   )
 }

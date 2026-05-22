@@ -31,7 +31,9 @@ import { updateGameAnalysisPopup } from '@/lib/features/game-analysis-popup'
 import { updateAutoReturnToLobby } from '@/lib/features/auto-return-to-lobby'
 import { updateOpggBuildRecommendation } from '@/lib/features/opgg-build-recommendation'
 import { updateBeautifyCustomAvatar } from '@/lib/features/beautify-client/custom-avatar'
-import { initSocialSidebarGlass } from '@/lib/features/beautify-client/social-sidebar-glass'
+import { initSocialSidebarGlass, updateSocialSidebarGlassConfig } from '@/lib/features/beautify-client/social-sidebar-glass'
+import { updateBeautifyHomepageBackground, updateBeautifyHomepageBackgroundGlassConfig } from '@/lib/features/beautify-client/homepage-background'
+import { updateBeautifyWallpaperMode, updateBeautifyWallpaperModeGlassConfig } from '@/lib/features/beautify-client/wallpaper-mode'
 import { updateGameModeFilter } from '@/lib/features/game-mode-filter'
 import { preloadChampSelectTierBadgeData, updateChampSelectTierBadge } from '@/lib/features/champselect-tier-badge'
 import { setAvailabilityHijackEnabled, setHideTFTEnabled, setHideRightNavTextEnabled } from '@/lib/injections'
@@ -737,6 +739,23 @@ function updateSideIndicator(enabled: boolean) {
  * 初始化所有功能
  * 根据 store 当前值启用功能，并监听后续变化
  */
+function syncSocialSidebarGlassConfig() {
+  const config = {
+    blur: store.get('beautifyGlassBlur'),
+    opacity: store.get('beautifyGlassOpacity'),
+  }
+
+  updateSocialSidebarGlassConfig(config)
+  updateBeautifyWallpaperModeGlassConfig(config)
+}
+
+function syncHomepageBackgroundGlassConfig() {
+  updateBeautifyHomepageBackgroundGlassConfig({
+    blur: store.get('beautifyHomepageBackgroundBlur'),
+    opacity: store.get('beautifyHomepageBackgroundOpacity'),
+  })
+}
+
 export function initFeatures() {
   preloadChampSelectTierBadgeData()
 
@@ -794,6 +813,18 @@ export function initFeatures() {
   store.onChange('customAvatarAssetPaths', updateBeautifyCustomAvatar)
 
   initSocialSidebarGlass()
+  syncSocialSidebarGlassConfig()
+  store.onChange('beautifyGlassBlur', syncSocialSidebarGlassConfig)
+  store.onChange('beautifyGlassOpacity', syncSocialSidebarGlassConfig)
+
+  syncHomepageBackgroundGlassConfig()
+  store.onChange('beautifyHomepageBackgroundBlur', syncHomepageBackgroundGlassConfig)
+  store.onChange('beautifyHomepageBackgroundOpacity', syncHomepageBackgroundGlassConfig)
+  updateBeautifyHomepageBackground(store.get('beautifyHomepageBackgroundAssetPath'))
+  store.onChange('beautifyHomepageBackgroundAssetPath', updateBeautifyHomepageBackground)
+
+  updateBeautifyWallpaperMode(store.get('beautifyWallpaperMode'))
+  store.onChange('beautifyWallpaperMode', updateBeautifyWallpaperMode)
 
   updateAutoHonor(store.get('autoHonor'))
   store.onChange('autoHonor', updateAutoHonor)

@@ -90,6 +90,20 @@ export interface SonaConfig {
   sideIndicatorMsgType: string
   /** 全局粒子美化效果 */
   globalParticle: boolean
+  /** 壁纸模式：隐藏主页活动中心，并清空右侧栏背景 */
+  beautifyWallpaperMode: boolean
+  /** 主页背景图片：assets 目录下的相对路径 */
+  beautifyHomepageBackgroundAssetPath: string | null
+  /** 主页壁纸资源：从美化资源区复制引用的 assets 相对路径列表 */
+  beautifyHomepageBackgroundAssetPaths: string[]
+  /** 主页壁纸毛玻璃模糊强度（px） */
+  beautifyHomepageBackgroundBlur: number
+  /** 主页壁纸底色不透明度（0-100） */
+  beautifyHomepageBackgroundOpacity: number
+  /** 美化毛玻璃模糊强度（px） */
+  beautifyGlassBlur: number
+  /** 美化毛玻璃背景不透明度（0-100） */
+  beautifyGlassOpacity: number
   /** 美化资源：用户手动录入的 assets 相对路径列表 */
   beautifyAssetPaths: string[]
   /** 自定义头像资源：从美化资源区复制引用的 assets 相对路径列表 */
@@ -189,6 +203,13 @@ const DEFAULT_CONFIG: SonaConfig = {
   sideIndicator: false,
   sideIndicatorMsgType: 'celebration',
   globalParticle: false,
+  beautifyWallpaperMode: false,
+  beautifyHomepageBackgroundAssetPath: null,
+  beautifyHomepageBackgroundAssetPaths: [],
+  beautifyHomepageBackgroundBlur: 0,
+  beautifyHomepageBackgroundOpacity: 0,
+  beautifyGlassBlur: 14,
+  beautifyGlassOpacity: 28,
   beautifyAssetPaths: [],
   customAvatarAssetPaths: [],
   friendSmartGroup: false,

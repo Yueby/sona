@@ -2,6 +2,8 @@ import { useRef, useState, type DragEvent } from 'react'
 import { SettingCard, SettingGroup } from '@/components/ui/SettingCard'
 import { SonaButton } from '@/components/ui/SonaButton'
 import { SonaInput } from '@/components/ui/SonaInput'
+import { SonaSlider } from '@/components/ui/SonaSlider'
+import { SonaSwitch } from '@/components/ui/SonaSwitch'
 import { store } from '@/lib/store'
 import '@/styles/SettingsPage.css'
 
@@ -33,9 +35,21 @@ export function BeautifyPage() {
   const dragScrollFrameRef = useRef<number | null>(null)
   const dragPointerYRef = useRef<number | null>(null)
   const [assetPathInput, setAssetPathInput] = useState('')
+  const [beautifyWallpaperMode, setBeautifyWallpaperMode] = useState(() => store.get('beautifyWallpaperMode'))
+  const [homepageBackgroundAssetPath, setHomepageBackgroundAssetPath] = useState(() => store.get('beautifyHomepageBackgroundAssetPath'))
+  const [homepageBackgroundAssetPaths, setHomepageBackgroundAssetPaths] = useState(() => {
+    const paths = store.get('beautifyHomepageBackgroundAssetPaths')
+    const activePath = store.get('beautifyHomepageBackgroundAssetPath')
+    return activePath && !paths.includes(activePath) ? [activePath, ...paths] : paths
+  })
+  const [homepageBackgroundBlur, setHomepageBackgroundBlur] = useState(() => store.get('beautifyHomepageBackgroundBlur'))
+  const [homepageBackgroundOpacity, setHomepageBackgroundOpacity] = useState(() => store.get('beautifyHomepageBackgroundOpacity'))
+  const [glassBlur, setGlassBlur] = useState(() => store.get('beautifyGlassBlur'))
+  const [glassOpacity, setGlassOpacity] = useState(() => store.get('beautifyGlassOpacity'))
   const [assetPaths, setAssetPaths] = useState(() => store.get('beautifyAssetPaths'))
   const [customAvatarAssetPaths, setCustomAvatarAssetPaths] = useState(() => store.get('customAvatarAssetPaths'))
   const [assetMessage, setAssetMessage] = useState('请输入 assets 目录下的相对路径，例： 你在 assets中放了一张 avatar.png 图片，那么请输入 avatar.png。\n如果你在assets中创建了一个文件夹并命名为icons，在其中放了一张 avatar.png 那么请输入 icons/avatar.png。')
+  const [isHomepageBackgroundDropActive, setIsHomepageBackgroundDropActive] = useState(false)
   const [isAvatarDropActive, setIsAvatarDropActive] = useState(false)
 
   const saveAssetPaths = (paths: string[]) => {
@@ -46,6 +60,41 @@ export function BeautifyPage() {
   const saveCustomAvatarAssetPaths = (paths: string[]) => {
     setCustomAvatarAssetPaths(paths)
     store.set('customAvatarAssetPaths', paths)
+  }
+
+  const saveHomepageBackgroundAssetPath = (assetPath: string | null) => {
+    setHomepageBackgroundAssetPath(assetPath)
+    store.set('beautifyHomepageBackgroundAssetPath', assetPath)
+  }
+
+  const saveHomepageBackgroundAssetPaths = (paths: string[]) => {
+    setHomepageBackgroundAssetPaths(paths)
+    store.set('beautifyHomepageBackgroundAssetPaths', paths)
+  }
+
+  const toggleBeautifyWallpaperMode = (enabled: boolean) => {
+    setBeautifyWallpaperMode(enabled)
+    store.set('beautifyWallpaperMode', enabled)
+  }
+
+  const updateGlassBlur = (value: number) => {
+    setGlassBlur(value)
+    store.set('beautifyGlassBlur', value)
+  }
+
+  const updateGlassOpacity = (value: number) => {
+    setGlassOpacity(value)
+    store.set('beautifyGlassOpacity', value)
+  }
+
+  const updateHomepageBackgroundBlur = (value: number) => {
+    setHomepageBackgroundBlur(value)
+    store.set('beautifyHomepageBackgroundBlur', value)
+  }
+
+  const updateHomepageBackgroundOpacity = (value: number) => {
+    setHomepageBackgroundOpacity(value)
+    store.set('beautifyHomepageBackgroundOpacity', value)
   }
 
   const addAssetPath = () => {
@@ -80,9 +129,45 @@ export function BeautifyPage() {
 
   const removeAssetPath = (assetPath: string) => {
     const nextPaths = assetPaths.filter((path) => path !== assetPath)
+    const nextHomepageBackgroundAssetPaths = homepageBackgroundAssetPaths.filter((path) => path !== assetPath)
     saveAssetPaths(nextPaths)
+    saveHomepageBackgroundAssetPaths(nextHomepageBackgroundAssetPaths)
     saveCustomAvatarAssetPaths(customAvatarAssetPaths.filter((path) => path !== assetPath))
+    if (homepageBackgroundAssetPath === assetPath) {
+      saveHomepageBackgroundAssetPath(nextHomepageBackgroundAssetPaths[0] ?? null)
+    }
     setAssetMessage(`已移除资源：${assetPath}`)
+  }
+
+  const applyHomepageBackgroundAssetPath = (assetPath: string) => {
+    if (!assetPaths.includes(assetPath)) {
+      setAssetMessage('只能使用资源列表中已录入的图片作为主页壁纸。')
+      return
+    }
+
+    saveHomepageBackgroundAssetPath(assetPath)
+    setAssetMessage(`已设置主页壁纸：${assetPath}`)
+  }
+
+  const addHomepageBackgroundAssetPath = (assetPath: string) => {
+    if (!assetPaths.includes(assetPath)) {
+      setAssetMessage('只能添加资源列表中已录入的图片作为主页壁纸。')
+      return
+    }
+
+    if (!homepageBackgroundAssetPaths.includes(assetPath)) {
+      saveHomepageBackgroundAssetPaths([...homepageBackgroundAssetPaths, assetPath])
+    }
+    applyHomepageBackgroundAssetPath(assetPath)
+  }
+
+  const removeHomepageBackgroundAssetPath = (assetPath: string) => {
+    const nextPaths = homepageBackgroundAssetPaths.filter((path) => path !== assetPath)
+    saveHomepageBackgroundAssetPaths(nextPaths)
+    if (homepageBackgroundAssetPath === assetPath) {
+      saveHomepageBackgroundAssetPath(nextPaths[0] ?? null)
+    }
+    setAssetMessage(`已从主页壁纸移除：${assetPath}`)
   }
 
   const addCustomAvatarAssetPath = (assetPath: string) => {
@@ -122,6 +207,7 @@ export function BeautifyPage() {
 
   const stopDragAutoScroll = () => {
     dragPointerYRef.current = null
+    setIsHomepageBackgroundDropActive(false)
     setIsAvatarDropActive(false)
     if (dragScrollFrameRef.current != null) {
       cancelAnimationFrame(dragScrollFrameRef.current)
@@ -181,6 +267,27 @@ export function BeautifyPage() {
     }
   }
 
+  const handleHomepageBackgroundDragOver = (event: DragEvent<HTMLDivElement>) => {
+    event.preventDefault()
+    event.dataTransfer.dropEffect = 'copy'
+    setIsHomepageBackgroundDropActive(true)
+    updateDragAutoScroll(event.clientY)
+  }
+
+  const handleHomepageBackgroundDragLeave = (event: DragEvent<HTMLDivElement>) => {
+    if (!event.currentTarget.contains(event.relatedTarget as Node | null)) {
+      setIsHomepageBackgroundDropActive(false)
+    }
+  }
+
+  const handleHomepageBackgroundDrop = (event: DragEvent<HTMLDivElement>) => {
+    event.preventDefault()
+    setIsHomepageBackgroundDropActive(false)
+    stopDragAutoScroll()
+    const assetPath = event.dataTransfer.getData(ASSET_DRAG_MIME) || event.dataTransfer.getData('text/plain')
+    addHomepageBackgroundAssetPath(assetPath)
+  }
+
   const handleAvatarDrop = (event: DragEvent<HTMLDivElement>) => {
     event.preventDefault()
     setIsAvatarDropActive(false)
@@ -206,68 +313,187 @@ export function BeautifyPage() {
     >
       <h2 className="sona-settings-title">美化</h2>
 
-      {assetPaths.length > 0 && (
-        <SettingGroup title="自定义头像">
-          <div
-            className={[
-              'sona-avatar-dropzone',
-              customAvatarAssetPaths.length === 0 ? 'sona-avatar-dropzone--empty' : '',
-              isAvatarDropActive ? 'sona-avatar-dropzone--active' : '',
-            ].filter(Boolean).join(' ')}
-            onDragOver={handleAvatarDragOver}
-            onDragLeave={handleAvatarDragLeave}
-            onDrop={handleAvatarDrop}
-          >
-            {customAvatarAssetPaths.length > 0 ? (
-              <div className="sona-avatar-grid">
-                {customAvatarAssetPaths.map((assetPath) => {
-                  const isApplied = customAvatarAssetPaths[0] === assetPath
-
-                  return (
-                    <div
-                      className={[
-                        'sona-avatar-card',
-                        isApplied ? 'sona-avatar-card--applied' : '',
-                      ].filter(Boolean).join(' ')}
-                      key={assetPath}
-                      role="button"
-                      tabIndex={0}
-                      onClick={() => applyCustomAvatarAssetPath(assetPath)}
-                      onKeyDown={(event) => {
-                        if (event.key === 'Enter' || event.key === ' ') {
-                          event.preventDefault()
-                          applyCustomAvatarAssetPath(assetPath)
-                        }
-                      }}
-                      aria-label={`应用 ${assetPath} 为自定义头像`}
-                    >
-                      <button
-                        className="sona-asset-card-remove"
-                        type="button"
-                        onClick={(event) => {
-                          event.stopPropagation()
-                          removeCustomAvatarAssetPath(assetPath)
-                        }}
-                        onKeyDown={(event) => event.stopPropagation()}
-                        aria-label={`移除 ${assetPath}`}
-                      >
-                        ×
-                      </button>
-                      <img src={getAssetUrl(assetPath)} alt={assetPath} />
-                      <span className="sona-avatar-card-name">{assetPath}</span>
-                      <span className="sona-avatar-card-action">点击应用</span>
-                    </div>
-                  )
-                })}
-              </div>
-            ) : (
-              <div className="sona-avatar-dropzone-placeholder">
-                <div className="sona-avatar-dropzone-plus">+</div>
-                <div>从下方资源列表拖动图片到这里，以添加自定义头像</div>
-              </div>
-            )}
+      <SettingGroup title="客户端美化">
+        <SettingCard
+          title="壁纸模式"
+          description="隐藏首页活动中心，并清空右侧栏背景，让自定义背景更干净。关闭后会恢复客户端默认显示。"
+        >
+          <SonaSwitch
+            checked={beautifyWallpaperMode}
+            onChange={toggleBeautifyWallpaperMode}
+          />
+        </SettingCard>
+        <SettingCard
+          title="好友栏毛玻璃参数"
+          description="调整右侧好友栏和壁纸模式侧栏的毛玻璃效果。"
+        >
+          <div className="sona-glass-settings">
+            <SonaSlider
+              label="模糊"
+              value={glassBlur}
+              min={0}
+              max={30}
+              unit="px"
+              onChange={updateGlassBlur}
+            />
+            <SonaSlider
+              label="底色"
+              value={glassOpacity}
+              min={0}
+              max={80}
+              unit="%"
+              onChange={updateGlassOpacity}
+            />
           </div>
-        </SettingGroup>
+        </SettingCard>
+      </SettingGroup>
+
+      {assetPaths.length > 0 && (
+        <>
+          <SettingGroup title="主页壁纸">
+            <div
+              className={[
+                'sona-wallpaper-dropzone',
+                homepageBackgroundAssetPaths.length === 0 ? 'sona-wallpaper-dropzone--empty' : '',
+                isHomepageBackgroundDropActive ? 'sona-wallpaper-dropzone--active' : '',
+              ].filter(Boolean).join(' ')}
+              onDragOver={handleHomepageBackgroundDragOver}
+              onDragLeave={handleHomepageBackgroundDragLeave}
+              onDrop={handleHomepageBackgroundDrop}
+            >
+              {homepageBackgroundAssetPaths.length > 0 ? (
+                <div className="sona-wallpaper-grid">
+                  {homepageBackgroundAssetPaths.map((assetPath) => {
+                    const isApplied = homepageBackgroundAssetPath === assetPath
+
+                    return (
+                      <div
+                        className={[
+                          'sona-wallpaper-card',
+                          isApplied ? 'sona-wallpaper-card--applied' : '',
+                        ].filter(Boolean).join(' ')}
+                        key={assetPath}
+                        role="button"
+                        tabIndex={0}
+                        onClick={() => applyHomepageBackgroundAssetPath(assetPath)}
+                        onKeyDown={(event) => {
+                          if (event.key === 'Enter' || event.key === ' ') {
+                            event.preventDefault()
+                            applyHomepageBackgroundAssetPath(assetPath)
+                          }
+                        }}
+                        aria-label={`应用 ${assetPath} 为主页壁纸`}
+                      >
+                        <button
+                          className="sona-asset-card-remove"
+                          type="button"
+                          onClick={(event) => {
+                            event.stopPropagation()
+                            removeHomepageBackgroundAssetPath(assetPath)
+                          }}
+                          onKeyDown={(event) => event.stopPropagation()}
+                          aria-label={`移除主页壁纸 ${assetPath}`}
+                        >
+                          ×
+                        </button>
+                        <img src={getAssetUrl(assetPath)} alt={assetPath} />
+                        <span className="sona-wallpaper-card-name">{assetPath}</span>
+                        <span className="sona-wallpaper-card-action">点击应用</span>
+                      </div>
+                    )
+                  })}
+                </div>
+              ) : (
+                <div className="sona-avatar-dropzone-placeholder">
+                  <div className="sona-avatar-dropzone-plus">+</div>
+                  <div>从下方资源列表拖动图片到这里，以添加主页壁纸</div>
+                </div>
+              )}
+            </div>
+            <SettingCard title="主页壁纸效果">
+              <div className="sona-glass-settings">
+                <SonaSlider
+                  label="模糊"
+                  value={homepageBackgroundBlur}
+                  min={0}
+                  max={30}
+                  unit="px"
+                  onChange={updateHomepageBackgroundBlur}
+                />
+                <SonaSlider
+                  label="底色"
+                  value={homepageBackgroundOpacity}
+                  min={0}
+                  max={80}
+                  unit="%"
+                  onChange={updateHomepageBackgroundOpacity}
+                />
+              </div>
+            </SettingCard>
+          </SettingGroup>
+
+          <SettingGroup title="自定义头像">
+            <div
+              className={[
+                'sona-avatar-dropzone',
+                customAvatarAssetPaths.length === 0 ? 'sona-avatar-dropzone--empty' : '',
+                isAvatarDropActive ? 'sona-avatar-dropzone--active' : '',
+              ].filter(Boolean).join(' ')}
+              onDragOver={handleAvatarDragOver}
+              onDragLeave={handleAvatarDragLeave}
+              onDrop={handleAvatarDrop}
+            >
+              {customAvatarAssetPaths.length > 0 ? (
+                <div className="sona-avatar-grid">
+                  {customAvatarAssetPaths.map((assetPath) => {
+                    const isApplied = customAvatarAssetPaths[0] === assetPath
+
+                    return (
+                      <div
+                        className={[
+                          'sona-avatar-card',
+                          isApplied ? 'sona-avatar-card--applied' : '',
+                        ].filter(Boolean).join(' ')}
+                        key={assetPath}
+                        role="button"
+                        tabIndex={0}
+                        onClick={() => applyCustomAvatarAssetPath(assetPath)}
+                        onKeyDown={(event) => {
+                          if (event.key === 'Enter' || event.key === ' ') {
+                            event.preventDefault()
+                            applyCustomAvatarAssetPath(assetPath)
+                          }
+                        }}
+                        aria-label={`应用 ${assetPath} 为自定义头像`}
+                      >
+                        <button
+                          className="sona-asset-card-remove"
+                          type="button"
+                          onClick={(event) => {
+                            event.stopPropagation()
+                            removeCustomAvatarAssetPath(assetPath)
+                          }}
+                          onKeyDown={(event) => event.stopPropagation()}
+                          aria-label={`移除 ${assetPath}`}
+                        >
+                          ×
+                        </button>
+                        <img src={getAssetUrl(assetPath)} alt={assetPath} />
+                        <span className="sona-avatar-card-name">{assetPath}</span>
+                        <span className="sona-avatar-card-action">点击应用</span>
+                      </div>
+                    )
+                  })}
+                </div>
+              ) : (
+                <div className="sona-avatar-dropzone-placeholder">
+                  <div className="sona-avatar-dropzone-plus">+</div>
+                  <div>从下方资源列表拖动图片到这里，以添加自定义头像</div>
+                </div>
+              )}
+            </div>
+          </SettingGroup>
+        </>
       )}
 
       <SettingGroup title="资源管理">
