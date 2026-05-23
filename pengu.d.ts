@@ -7,6 +7,11 @@ import type { Root } from 'react-dom/client'
 
 declare global {
   interface PenguContext {
+    meta: {
+      name: string
+      version?: string
+      [key: string]: unknown
+    }
     rcp: {
       preInit: (name: string, callback: (api: unknown) => void) => void
       /**
