@@ -49,9 +49,19 @@ function isSupportedMediaFile(fileName: string): boolean {
 }
 
 function normalizeAssetPath(value: string): string {
-  return value
+  let normalized = value
     .trim()
+    .replace(/^["']|["']$/g, '')
     .replace(/\\/g, '/')
+
+  const lowerPath = normalized.toLowerCase()
+  const sonaAssetsMarker = '/sona/assets/'
+  const sonaAssetsIndex = lowerPath.lastIndexOf(sonaAssetsMarker)
+  if (sonaAssetsIndex >= 0) {
+    normalized = normalized.slice(sonaAssetsIndex + sonaAssetsMarker.length)
+  }
+
+  return normalized
     .replace(/^\.\/+/, '')
     .replace(/^assets\/+/i, '')
     .replace(/^\/+/, '')
