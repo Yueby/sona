@@ -22,10 +22,12 @@ const REGALIA_HOVERCARD_HOST_SELECTOR = 'lol-regalia-hovercard-v2-element'
 const REGALIA_PROFILE_HOST_SELECTOR = 'lol-regalia-profile-v2-element'
 const REGALIA_AVATAR_SELECTOR = 'lol-regalia-crest-v2-element'
 const REGALIA_PROFILE_AVATAR_SELECTOR = 'lol-regalia-crest-v2-element.regalia-profile-crest-element'
+const REGALIA_SUMMONER_ICON_SELECTOR = '.lol-regalia-summoner-icon'
 const PROFILE_ICON_ATTR = 'profile-icon-url'
 const MEMBER_TYPE_ATTR = 'member-type'
 const PUUID_ATTR = 'puuid'
 const DATA_PUUID_ATTR = 'data-puuid'
+const VOICE_PUUID_ATTR = 'voice-puuid'
 const SOCIAL_MEMBER_SELECTOR = '[class*="lol-social-roster-member"]'
 const SOCIAL_MEMBER_NAME_SELECTOR = '.member-name'
 const FRIENDS_URI = '/lol-chat/v1/friends'
@@ -51,6 +53,7 @@ const patchedFriendImages = new Set<HTMLImageElement>()
 const patchedRegaliaElements = new Set<Element>()
 const originalFriendImageSrc = new WeakMap<HTMLImageElement, string | null>()
 const originalRegaliaProfileIconUrl = new WeakMap<Element, string | null>()
+const originalRegaliaSummonerIconBackgroundImage = new WeakMap<Element, string | null>()
 const patchedFriendImagePuuid = new WeakMap<HTMLImageElement, string>()
 const patchedRegaliaElementPuuid = new WeakMap<Element, string>()
 const remoteAvatarCache = new Map<string, string | null>(
@@ -98,6 +101,29 @@ function getRegaliaElementPuuid(element: Element): string {
 
   const profileHost = element.closest(REGALIA_PROFILE_HOST_SELECTOR)
   return getPuuidFromElement(profileHost)
+}
+
+function getDirectPuuidFromElement(element: Element | null): string {
+  if (!element) return ''
+  return normalizePuuid(element.getAttribute(PUUID_ATTR) || element.getAttribute(DATA_PUUID_ATTR))
+}
+
+function getVoicePuuidFromRegaliaAvatarElement(element: Element): string {
+  return normalizePuuid(element.getAttribute(VOICE_PUUID_ATTR))
+}
+
+function isArenaVoiceRegaliaAvatarElement(element: Element): boolean {
+  return !getDirectPuuidFromElement(element) && Boolean(getVoicePuuidFromRegaliaAvatarElement(element))
+}
+
+function getRegaliaAvatarCandidatePuuid(element: Element, fallbackPuuid = ''): string {
+  const directPuuid = getDirectPuuidFromElement(element)
+  if (directPuuid) return directPuuid
+
+  const voicePuuid = getVoicePuuidFromRegaliaAvatarElement(element)
+  if (voicePuuid) return voicePuuid
+
+  return normalizePuuid(fallbackPuuid) || getRegaliaElementPuuid(element)
 }
 
 function indexFriendPuuid(friend: ChatFriend) {
@@ -378,7 +404,12 @@ function observeRegaliaAvatarElement(element: Element) {
 
   const observer = new MutationObserver((mutations) => {
     for (const mutation of mutations) {
-      if (mutation.attributeName === PROFILE_ICON_ATTR) {
+      if (
+        mutation.attributeName === PROFILE_ICON_ATTR
+        || mutation.attributeName === PUUID_ATTR
+        || mutation.attributeName === DATA_PUUID_ATTR
+        || mutation.attributeName === VOICE_PUUID_ATTR
+      ) {
         scheduleApplyCustomAvatar()
         return
       }
@@ -387,7 +418,7 @@ function observeRegaliaAvatarElement(element: Element) {
 
   observer.observe(element, {
     attributes: true,
-    attributeFilter: [PROFILE_ICON_ATTR],
+    attributeFilter: [PROFILE_ICON_ATTR, PUUID_ATTR, DATA_PUUID_ATTR, VOICE_PUUID_ATTR],
   })
   regaliaElementObservers.set(element, observer)
 }
@@ -459,17 +490,36 @@ function patchFriendAvatar(image: HTMLImageElement, avatarUrl: string, puuid: st
 function restoreRegaliaAvatar(element: Element): boolean {
   if (!patchedRegaliaElements.has(element)) return false
 
-  const original = originalRegaliaProfileIconUrl.get(element)
-  if (original == null) element.removeAttribute(PROFILE_ICON_ATTR)
-  else element.setAttribute(PROFILE_ICON_ATTR, original)
-  ;(element as unknown as { profileIconUrl?: string }).profileIconUrl = original ?? ''
+  let changed = false
+
+  if (originalRegaliaProfileIconUrl.has(element)) {
+    const original = originalRegaliaProfileIconUrl.get(element)
+    if (original == null) element.removeAttribute(PROFILE_ICON_ATTR)
+    else element.setAttribute(PROFILE_ICON_ATTR, original)
+    ;(element as unknown as { profileIconUrl?: string }).profileIconUrl = original ?? ''
+    originalRegaliaProfileIconUrl.delete(element)
+    changed = true
+  }
+
+  if (originalRegaliaSummonerIconBackgroundImage.has(element)) {
+    const icon = getRegaliaSummonerIconElement(element)
+    const original = originalRegaliaSummonerIconBackgroundImage.get(element)
+    if (icon) icon.style.backgroundImage = original ?? ''
+    originalRegaliaSummonerIconBackgroundImage.delete(element)
+    changed = true
+  }
+
   patchedRegaliaElements.delete(element)
   patchedRegaliaElementPuuid.delete(element)
-  return true
+  return changed
 }
 
 function patchRegaliaAvatar(element: Element, avatarUrl: string, puuid: string): boolean {
   observeRegaliaAvatarElement(element)
+
+  if (isArenaVoiceRegaliaAvatarElement(element)) {
+    return patchRegaliaArenaAvatar(element, avatarUrl, puuid)
+  }
 
   if (!originalRegaliaProfileIconUrl.has(element)) {
     originalRegaliaProfileIconUrl.set(element, element.getAttribute(PROFILE_ICON_ATTR))
@@ -484,12 +534,52 @@ function patchRegaliaAvatar(element: Element, avatarUrl: string, puuid: string):
   return true
 }
 
+function getRegaliaSummonerIconElement(element: Element): HTMLElement | null {
+  const shadowRoot = (element as HTMLElement).shadowRoot
+  if (!shadowRoot) return null
+
+  observeRegaliaShadowRoot(shadowRoot)
+  return shadowRoot.querySelector<HTMLElement>(REGALIA_SUMMONER_ICON_SELECTOR)
+}
+
+function toCssUrl(value: string): string {
+  return `url("${value.replace(/\\/g, '\\\\').replace(/"/g, '\\"')}")`
+}
+
+function patchRegaliaArenaAvatar(element: Element, avatarUrl: string, puuid: string): boolean {
+  const icon = getRegaliaSummonerIconElement(element)
+  if (!icon) {
+    requestAnimationFrame(scheduleApplyCustomAvatar)
+    return false
+  }
+
+  if (!originalRegaliaSummonerIconBackgroundImage.has(element)) {
+    originalRegaliaSummonerIconBackgroundImage.set(element, icon.style.backgroundImage || null)
+  }
+
+  const nextBackgroundImage = toCssUrl(avatarUrl)
+  patchedRegaliaElements.add(element)
+  patchedRegaliaElementPuuid.set(element, puuid)
+
+  if (icon.style.backgroundImage === nextBackgroundImage) return false
+
+  icon.style.backgroundImage = nextBackgroundImage
+  return true
+}
+
 function observeRegaliaShadowRoot(shadowRoot: ShadowRoot) {
   if (regaliaShadowRootObservers.has(shadowRoot)) return
 
   const observer = new MutationObserver((mutations) => {
     for (const mutation of mutations) {
-      if (mutation.type === 'childList' || mutation.attributeName === PROFILE_ICON_ATTR) {
+      if (
+        mutation.type === 'childList'
+        || mutation.attributeName === PROFILE_ICON_ATTR
+        || mutation.attributeName === PUUID_ATTR
+        || mutation.attributeName === DATA_PUUID_ATTR
+        || mutation.attributeName === VOICE_PUUID_ATTR
+        || mutation.attributeName === 'style'
+      ) {
         scheduleApplyCustomAvatar()
         return
       }
@@ -500,7 +590,7 @@ function observeRegaliaShadowRoot(shadowRoot: ShadowRoot) {
     childList: true,
     subtree: true,
     attributes: true,
-    attributeFilter: [PROFILE_ICON_ATTR],
+    attributeFilter: [PROFILE_ICON_ATTR, PUUID_ATTR, DATA_PUUID_ATTR, VOICE_PUUID_ATTR, 'style'],
   })
 
   regaliaShadowRootObservers.set(shadowRoot, observer)
@@ -513,6 +603,7 @@ interface RegaliaAvatarCandidate {
 
 function queryRegaliaAvatarElements(): RegaliaAvatarCandidate[] {
   const candidates = new Map<Element, RegaliaAvatarCandidate>()
+  const visitedRoots = new Set<ParentNode>()
 
   const addCandidate = (element: Element, puuid: string) => {
     const normalizedPuuid = normalizePuuid(puuid)
@@ -520,51 +611,37 @@ function queryRegaliaAvatarElements(): RegaliaAvatarCandidate[] {
     candidates.set(element, { element, puuid: normalizedPuuid })
   }
 
-  document.querySelectorAll(REGALIA_PROFILE_AVATAR_SELECTOR).forEach((element) => {
-    addCandidate(element, getRegaliaElementPuuid(element))
-  })
+  const scanRoot = (root: ParentNode, fallbackPuuid = '') => {
+    if (visitedRoots.has(root)) return
+    visitedRoots.add(root)
 
-  document.querySelectorAll<HTMLElement>(REGALIA_PARTY_ANY_HOST_SELECTOR).forEach((host) => {
-    observeRegaliaPartyHost(host)
-    const hostPuuid = getPuuidFromElement(host)
-    if (!hostPuuid) return
+    if (root instanceof ShadowRoot) {
+      observeRegaliaShadowRoot(root)
+    }
 
-    const shadowRoot = host.shadowRoot
-    if (!shadowRoot) return
-
-    observeRegaliaShadowRoot(shadowRoot)
-    shadowRoot.querySelectorAll(REGALIA_AVATAR_SELECTOR).forEach((element) => {
-      addCandidate(element, hostPuuid)
+    root.querySelectorAll(REGALIA_AVATAR_SELECTOR).forEach((element) => {
+      addCandidate(element, getRegaliaAvatarCandidatePuuid(element, fallbackPuuid))
     })
-  })
 
-  document.querySelectorAll<HTMLElement>(REGALIA_HOVERCARD_HOST_SELECTOR).forEach((host) => {
-    observeRegaliaHovercardHost(host)
-    const hostPuuid = getPuuidFromElement(host)
-    if (!hostPuuid) return
+    root.querySelectorAll<HTMLElement>('*').forEach((host) => {
+      const shadowRoot = host.shadowRoot
+      if (!shadowRoot) return
 
-    const shadowRoot = host.shadowRoot
-    if (!shadowRoot) return
+      if (host.matches(REGALIA_PARTY_ANY_HOST_SELECTOR)) {
+        observeRegaliaPartyHost(host)
+      } else if (host.matches(REGALIA_HOVERCARD_HOST_SELECTOR) || host.matches(REGALIA_PROFILE_HOST_SELECTOR)) {
+        observeRegaliaHovercardHost(host)
+      }
 
-    observeRegaliaShadowRoot(shadowRoot)
-    shadowRoot.querySelectorAll(REGALIA_AVATAR_SELECTOR).forEach((element) => {
-      addCandidate(element, hostPuuid)
+      scanRoot(shadowRoot, getPuuidFromElement(host) || fallbackPuuid)
     })
+  }
+
+  document.querySelectorAll(`${REGALIA_AVATAR_SELECTOR}[${VOICE_PUUID_ATTR}]`).forEach((element) => {
+    addCandidate(element, getRegaliaAvatarCandidatePuuid(element))
   })
 
-  document.querySelectorAll<HTMLElement>(REGALIA_PROFILE_HOST_SELECTOR).forEach((host) => {
-    observeRegaliaHovercardHost(host)
-    const hostPuuid = getPuuidFromElement(host)
-    if (!hostPuuid) return
-
-    const shadowRoot = host.shadowRoot
-    if (!shadowRoot) return
-
-    observeRegaliaShadowRoot(shadowRoot)
-    shadowRoot.querySelectorAll(REGALIA_AVATAR_SELECTOR).forEach((element) => {
-      addCandidate(element, hostPuuid)
-    })
-  })
+  scanRoot(document)
 
   return [...candidates.values()]
 }
