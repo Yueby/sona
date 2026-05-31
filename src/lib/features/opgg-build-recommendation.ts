@@ -40,8 +40,8 @@ const DEFAULT_OPGG_TIER: OpggTier = 'master_plus'
 const SONA_ITEM_SET_TITLE_PREFIX = '[Sona]'
 const HEALTH_POTION_ID = 2003
 const ITEM_SET_ASSOCIATED_MAPS = [11, 12, 30]
-const RUNE_PAGES_EVENT_URI = '/lol-perks/v1/pages'
-const CURRENT_RUNE_PAGE_EVENT_URI = '/lol-perks/v1/currentpage'
+// 符文页通过每秒轮询读取（WS 事件经常不推送，轮询更稳定）。
+const RUNE_PAGE_POLL_INTERVAL_MS = 1000
 const RUNE_APPLY_SUPPRESS_MS = 1500
 const SPELL_APPLY_SUPPRESS_MS = 1500
 const SMART_LOADOUT_RESTORE_DEBOUNCE_MS = 500
@@ -78,8 +78,9 @@ const MAX_RECOMMENDATION_CACHE_SIZE = 8
 
 let phaseUnsub: (() => void) | null = null
 let champSelectUnsub: (() => void) | null = null
-let runePagesUnsub: (() => void) | null = null
-let currentRunePageUnsub: (() => void) | null = null
+let runePagePollTimer: number | null = null
+let lastPolledRuneKey = ''
+let lastPolledRuneSignature = ''
 let championLockPollTimer: number | null = null
 let championLockPollAttempts = 0
 let injectRegistered = false
@@ -578,40 +579,69 @@ function saveCurrentSmartSummonerSpells(player: ChampSelectSession['myTeam'][num
   logger.info('[OPGG] 已保存智能召唤师技能 → key=%s, spells=%s', spellKey, signature)
 }
 
-function handleRunePageEvent(event: LCUEventMessage): void {
-  const page = event.data as RunePage | null
-  logger.info(
-    '[OPGG] WS 符文页事件 (pages) → eventType=%s, name=%s, id=%s, current=%s, isActive=%s, primaryStyleId=%s, subStyleId=%s, perks=%s',
-    event.eventType,
-    page?.name ?? 'unknown',
-    page?.id ?? 'unknown',
-    page?.current,
-    page?.isActive,
-    page?.primaryStyleId,
-    page?.subStyleId,
-    page?.selectedPerkIds?.length ?? 0,
-  )
-  if (event.eventType !== 'Create' && event.eventType !== 'Update') return
-  if (!page || typeof page !== 'object') return
-  saveCurrentSmartRunePage(page)
+function getActiveRunePage(pages: RunePage[]): RunePage | null {
+  return pages.find((page) => page.current) ?? pages.find((page) => page.isActive) ?? null
 }
 
-function handleCurrentRunePageEvent(event: LCUEventMessage): void {
-  const page = event.data as RunePage | null
-  logger.info(
-    '[OPGG] WS 符文页事件 (currentpage) → eventType=%s, name=%s, id=%s, current=%s, isActive=%s, primaryStyleId=%s, subStyleId=%s, perks=%s',
-    event.eventType,
-    page?.name ?? 'unknown',
-    page?.id ?? 'unknown',
-    page?.current,
-    page?.isActive,
-    page?.primaryStyleId,
-    page?.subStyleId,
-    page?.selectedPerkIds?.length ?? 0,
-  )
-  if (event.eventType === 'Delete') return
-  if (!page || typeof page !== 'object') return
-  saveCurrentSmartRunePage(page)
+async function pollCurrentRunePage(): Promise<void> {
+  if (!store.get('smartBuildRecommendation')) return
+  if (currentContext.championId <= 0 || !currentChampionLocked) return
+
+  const runeKey = getSmartRuneKey(currentContext)
+  if (!runeKey) return
+
+  try {
+    const pages = await lcu.getRunePages()
+    const active = getActiveRunePage(pages)
+    if (!active || !isValidRunePage(active)) return
+
+    const signature = getRunePageSignature(active)
+
+    // 首次观察到该英雄/模式的符文页时，仅记录基线，不触发保存。
+    // 否则锁定瞬间（Sona 自动恢复完成之前）轮询会把“恢复前的旧符文页”
+    // 误判为变化并覆盖掉用户已保存的智能符文。
+    if (runeKey !== lastPolledRuneKey) {
+      lastPolledRuneKey = runeKey
+      lastPolledRuneSignature = signature
+      return
+    }
+
+    // 符文页未变化：直接跳过，不做任何保存。
+    if (signature === lastPolledRuneSignature) return
+
+    logger.info(
+      '[OPGG] 轮询检测到符文页变化 → name=%s, id=%s, current=%s, isActive=%s, signature=%s',
+      active.name,
+      active.id,
+      active.current,
+      active.isActive,
+      signature,
+    )
+    lastPolledRuneSignature = signature
+    saveCurrentSmartRunePage(active)
+  } catch (err) {
+    logger.debug('[OPGG] 轮询符文页失败:', err)
+  }
+}
+
+function startRunePagePolling(): void {
+  if (runePagePollTimer != null) return
+
+  lastPolledRuneKey = ''
+  lastPolledRuneSignature = ''
+  runePagePollTimer = window.setInterval(() => {
+    void pollCurrentRunePage()
+  }, RUNE_PAGE_POLL_INTERVAL_MS)
+  logger.info('[OPGG] 已启动符文页轮询（每 %dms 读取一次）', RUNE_PAGE_POLL_INTERVAL_MS)
+}
+
+function stopRunePagePolling(): void {
+  if (runePagePollTimer != null) {
+    window.clearInterval(runePagePollTimer)
+    runePagePollTimer = null
+  }
+  lastPolledRuneKey = ''
+  lastPolledRuneSignature = ''
 }
 
 async function upsertRecommendedItemSet(context: RecommendationContext, recommendation: BuildRecommendation): Promise<void> {
@@ -1585,6 +1615,7 @@ function unmountPanel() {
 
 function unmount(resetContext = true) {
   stopChampionLockPolling()
+  stopRunePagePolling()
   unmountPanel()
   if (resetContext) {
     currentContext = {
@@ -1624,6 +1655,7 @@ function startOpggListeners() {
     if (phase === 'ChampSelect') {
       unregisterInGameBuildButton()
       logger.info('[OPGG] 进入 ChampSelect，等待本地英雄锁定')
+      startRunePagePolling()
       scheduleRefreshWhenChampionLocked()
     } else if (phase === 'InProgress') {
       unmount()
@@ -1645,11 +1677,9 @@ function startOpggListeners() {
     }
   })
 
-  runePagesUnsub = lcu.observe(RUNE_PAGES_EVENT_URI, handleRunePageEvent)
-  currentRunePageUnsub = lcu.observe(CURRENT_RUNE_PAGE_EVENT_URI, handleCurrentRunePageEvent)
-
   lcu.getGameflowPhase().then((phase) => {
     if (phase === 'ChampSelect') {
+      startRunePagePolling()
       scheduleRefreshWhenChampionLocked()
     } else if (phase === 'InProgress') {
       registerInGameBuildButton()
@@ -1679,14 +1709,6 @@ export function updateOpggBuildRecommendation(enabled: boolean) {
     if (champSelectUnsub) {
       champSelectUnsub()
       champSelectUnsub = null
-    }
-    if (runePagesUnsub) {
-      runePagesUnsub()
-      runePagesUnsub = null
-    }
-    if (currentRunePageUnsub) {
-      currentRunePageUnsub()
-      currentRunePageUnsub = null
     }
     unmount()
     logger.info('[OPGG] 配装推荐接管已禁用')
