@@ -92,6 +92,8 @@ export function BeautifyPage() {
   const dragPointerYRef = useRef<number | null>(null)
   const [assetPathInput, setAssetPathInput] = useState('')
   const [beautifyWallpaperMode, setBeautifyWallpaperMode] = useState(() => store.get('beautifyWallpaperMode'))
+  const [wallpaperSceneBlur, setWallpaperSceneBlur] = useState(() => store.get('beautifyWallpaperSceneBlur'))
+  const [wallpaperSceneOpacity, setWallpaperSceneOpacity] = useState(() => store.get('beautifyWallpaperSceneOpacity'))
   const [homepageBackgroundAssetPath, setHomepageBackgroundAssetPath] = useState(() => store.get('beautifyHomepageBackgroundAssetPath'))
   const [homepageBackgroundRandom, setHomepageBackgroundRandom] = useState(() => store.get('beautifyHomepageBackgroundRandom'))
   const [homepageBackgroundAssetPaths, setHomepageBackgroundAssetPaths] = useState(() => {
@@ -145,6 +147,16 @@ export function BeautifyPage() {
   const toggleBeautifyWallpaperMode = (enabled: boolean) => {
     setBeautifyWallpaperMode(enabled)
     store.set('beautifyWallpaperMode', enabled)
+  }
+
+  const updateWallpaperSceneBlur = (value: number) => {
+    setWallpaperSceneBlur(value)
+    store.set('beautifyWallpaperSceneBlur', value)
+  }
+
+  const updateWallpaperSceneOpacity = (value: number) => {
+    setWallpaperSceneOpacity(value)
+    store.set('beautifyWallpaperSceneOpacity', value)
   }
 
   const updateGlassBlur = (value: number) => {
@@ -503,6 +515,29 @@ export function BeautifyPage() {
             checked={beautifyWallpaperMode}
             onChange={toggleBeautifyWallpaperMode}
           />
+        </SettingCard>
+        <SettingCard
+          title={t('beautify.wallpaperScene.title')}
+          description={t('beautify.wallpaperScene.description')}
+        >
+          <div className="sona-glass-settings">
+            <SonaSlider
+              label={t('beautify.slider.blur')}
+              value={wallpaperSceneBlur}
+              min={0}
+              max={40}
+              unit="px"
+              onChange={updateWallpaperSceneBlur}
+            />
+            <SonaSlider
+              label={t('beautify.slider.opacity')}
+              value={wallpaperSceneOpacity}
+              min={0}
+              max={80}
+              unit="%"
+              onChange={updateWallpaperSceneOpacity}
+            />
+          </div>
         </SettingCard>
         <SettingCard
           title={t('beautify.glass.title')}

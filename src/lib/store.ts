@@ -96,6 +96,10 @@ export interface SonaConfig {
   globalParticle: boolean
   /** 壁纸模式：隐藏主页活动中心，并清空右侧栏背景 */
   beautifyWallpaperMode: boolean
+  /** 壁纸模式：模式选择 / 大厅场景背景切换器的毛玻璃模糊强度（px） */
+  beautifyWallpaperSceneBlur: number
+  /** 壁纸模式：模式选择 / 大厅场景背景切换器的毛玻璃底色不透明度（0-100） */
+  beautifyWallpaperSceneOpacity: number
   /** 主页背景图片：assets 目录下的相对路径 */
   beautifyHomepageBackgroundAssetPath: string | null
   /** 主页壁纸资源：从美化资源区复制引用的 assets 相对路径列表 */
@@ -222,6 +226,8 @@ const DEFAULT_CONFIG: SonaConfig = {
   sideIndicatorMsgType: 'celebration',
   globalParticle: false,
   beautifyWallpaperMode: false,
+  beautifyWallpaperSceneBlur: 4,
+  beautifyWallpaperSceneOpacity: 15,
   beautifyHomepageBackgroundAssetPath: null,
   beautifyHomepageBackgroundAssetPaths: [],
   beautifyHomepageBackgroundRandom: false,

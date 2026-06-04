@@ -33,7 +33,7 @@ import { updateOpggBuildRecommendation } from '@/lib/features/opgg-build-recomme
 import { updateBeautifyCustomAvatar } from '@/lib/features/beautify-client/custom-avatar'
 import { initSocialSidebarGlass, updateSocialSidebarGlassConfig } from '@/lib/features/beautify-client/social-sidebar-glass'
 import { updateBeautifyHomepageBackground, updateBeautifyHomepageBackgroundAdjustments, updateBeautifyHomepageBackgroundGlassConfig } from '@/lib/features/beautify-client/homepage-background'
-import { updateBeautifyWallpaperMode, updateBeautifyWallpaperModeGlassConfig } from '@/lib/features/beautify-client/wallpaper-mode'
+import { updateBeautifyWallpaperMode, updateBeautifyWallpaperModeGlassConfig, updateBeautifyWallpaperSceneConfig } from '@/lib/features/beautify-client/wallpaper-mode'
 import { updateGameModeFilter } from '@/lib/features/game-mode-filter'
 import { preloadChampSelectTierBadgeData, updateChampSelectTierBadge } from '@/lib/features/champselect-tier-badge'
 import { setAvailabilityHijackEnabled, setHideTFTEnabled, setHideRightNavTextEnabled } from '@/lib/injections'
@@ -756,6 +756,13 @@ function syncSocialSidebarGlassConfig() {
   updateBeautifyWallpaperModeGlassConfig(config)
 }
 
+function syncWallpaperSceneConfig() {
+  updateBeautifyWallpaperSceneConfig({
+    blur: store.get('beautifyWallpaperSceneBlur'),
+    opacity: store.get('beautifyWallpaperSceneOpacity'),
+  })
+}
+
 function syncHomepageBackgroundGlassConfig() {
   updateBeautifyHomepageBackgroundGlassConfig({
     blur: store.get('beautifyHomepageBackgroundBlur'),
@@ -853,6 +860,10 @@ export function initFeatures() {
 
   updateBeautifyWallpaperMode(store.get('beautifyWallpaperMode'))
   store.onChange('beautifyWallpaperMode', updateBeautifyWallpaperMode)
+
+  syncWallpaperSceneConfig()
+  store.onChange('beautifyWallpaperSceneBlur', syncWallpaperSceneConfig)
+  store.onChange('beautifyWallpaperSceneOpacity', syncWallpaperSceneConfig)
 
   updateAutoHonor(store.get('autoHonor'))
   store.onChange('autoHonor', updateAutoHonor)
