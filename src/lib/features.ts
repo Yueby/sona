@@ -14,6 +14,8 @@ import { sleep } from '@/lib/utils'
 import { updateBalanceBuffTooltip } from '@/lib/features/balance-buff-viewer'
 import { updateChampSelectQuitButton } from '@/lib/features/champselect-quit-button'
 import { updateAutoAccept } from '@/lib/features/auto-accept'
+import { updateAllowDeclineAfterAccept } from '@/lib/features/ready-check-control'
+import { updateHideEsportsPopup } from '@/lib/features/hide-esports-popup'
 import { updateDebugGameflow } from '@/lib/features/debug-gameflow'
 import { updateUnlockStatus } from '@/lib/features/unlock-status'
 import { updateBenchNoCooldown } from '@/lib/features/bench-no-cooldown'
@@ -794,6 +796,9 @@ export function initFeatures() {
   updateAutoAccept(store.get('autoAcceptMatch'))
   store.onChange('autoAcceptMatch', updateAutoAccept)
 
+  updateAllowDeclineAfterAccept(store.get('allowDeclineAfterAccept'))
+  store.onChange('allowDeclineAfterAccept', updateAllowDeclineAfterAccept)
+
   updateDebugGameflow(store.get('developerMode'))
   store.onChange('developerMode', updateDebugGameflow)
 
@@ -912,6 +917,10 @@ export function initFeatures() {
   // 隐藏主页右侧导航栏文字
   setHideRightNavTextEnabled(store.get('hideRightNavText'))
   store.onChange('hideRightNavText', setHideRightNavTextEnabled)
+
+  // 关闭右下角赛事直播弹窗
+  updateHideEsportsPopup(store.get('hideEsportsPopup'))
+  store.onChange('hideEsportsPopup', updateHideEsportsPopup)
 
   // 玩家对战模式可见性勾选条
   updateGameModeFilter(store.get('gameModeFilter'))

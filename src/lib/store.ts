@@ -25,6 +25,8 @@
 export interface SonaConfig {
   /** 自动接受对局 */
   autoAcceptMatch: boolean
+  /** 允许接受对局后再拒绝（解禁 ReadyCheck 的接受/拒绝按钮，使其始终可点） */
+  allowDeclineAfterAccept: boolean
   /** 自动接受对局的随机延迟：最小值（毫秒），0 或非法值视为无延迟 */
   autoAcceptDelayMin: number
   /** 自动接受对局的随机延迟：最大值（毫秒），上限 15000；非法则秒接 */
@@ -158,6 +160,8 @@ export interface SonaConfig {
   hiddenGameModes: Record<string, boolean>
   /** 隐藏主页右侧导航栏文字（仅保留图标） */
   hideRightNavText: boolean
+  /** 关闭右下角赛事直播弹窗（iframe#tv-official-pop，检测到即移除） */
+  hideEsportsPopup: boolean
   /** 对局结束自动点赞 */
   autoHonor: boolean
   /** 段位伪装开关 */
@@ -197,6 +201,7 @@ export interface SonaConfig {
 /** 配置项默认值 */
 const DEFAULT_CONFIG: SonaConfig = {
   autoAcceptMatch: false,
+  allowDeclineAfterAccept: true,
   autoAcceptDelayMin: 0,
   autoAcceptDelayMax: 0,
   developerMode: false,
@@ -248,6 +253,7 @@ const DEFAULT_CONFIG: SonaConfig = {
   gameModeFilter: true,
   hiddenGameModes: {},
   hideRightNavText: false,
+  hideEsportsPopup: true,
   customProfileBg: false,
   ignoreProfilePrivacy: true,
   customBanner: false,

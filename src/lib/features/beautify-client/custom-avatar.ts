@@ -23,6 +23,8 @@ const REGALIA_PROFILE_HOST_SELECTOR = 'lol-regalia-profile-v2-element'
 const REGALIA_AVATAR_SELECTOR = 'lol-regalia-crest-v2-element'
 const REGALIA_PROFILE_AVATAR_SELECTOR = 'lol-regalia-crest-v2-element.regalia-profile-crest-element'
 const REGALIA_SUMMONER_ICON_SELECTOR = '.lol-regalia-summoner-icon'
+const TFT_SELF_CARD_SELECTOR = '.tft-player-card.tft-player-card-self'
+const TFT_ICON_IMAGE_SELECTOR = '.icon-wrapper .icon-image'
 const PROFILE_ICON_ATTR = 'profile-icon-url'
 const MEMBER_TYPE_ATTR = 'member-type'
 const PUUID_ATTR = 'puuid'
@@ -44,14 +46,17 @@ let ownStatusUnsub: (() => void) | null = null
 let friendAvatarRefreshTimer: number | null = null
 let ownStatusRestorePromise: Promise<void> | null = null
 const friendImageObservers = new Map<HTMLImageElement, MutationObserver>()
+const tftIconObservers = new Map<HTMLElement, MutationObserver>()
 const regaliaElementObservers = new Map<Element, MutationObserver>()
 const regaliaPartyHostObservers = new Map<Element, MutationObserver>()
 const regaliaHovercardHostObservers = new Map<Element, MutationObserver>()
 const regaliaShadowRootObservers = new Map<ShadowRoot, MutationObserver>()
 
 const patchedFriendImages = new Set<HTMLImageElement>()
+const patchedTftIcons = new Set<HTMLElement>()
 const patchedRegaliaElements = new Set<Element>()
 const originalFriendImageSrc = new WeakMap<HTMLImageElement, string | null>()
+const originalTftIconBackgroundImage = new WeakMap<HTMLElement, string | null>()
 const originalRegaliaProfileIconUrl = new WeakMap<Element, string | null>()
 const originalRegaliaSummonerIconBackgroundImage = new WeakMap<Element, string | null>()
 const patchedFriendImagePuuid = new WeakMap<HTMLImageElement, string>()
@@ -399,6 +404,59 @@ function observeFriendImage(image: HTMLImageElement) {
   friendImageObservers.set(image, observer)
 }
 
+function observeTftIcon(icon: HTMLElement) {
+  if (tftIconObservers.has(icon)) return
+
+  const observer = new MutationObserver((mutations) => {
+    for (const mutation of mutations) {
+      if (mutation.attributeName === 'style') {
+        scheduleApplyCustomAvatar()
+        return
+      }
+    }
+  })
+
+  observer.observe(icon, {
+    attributes: true,
+    attributeFilter: ['style'],
+  })
+  tftIconObservers.set(icon, observer)
+}
+
+function queryTftSelfIcons(): HTMLElement[] {
+  const icons: HTMLElement[] = []
+  document.querySelectorAll(TFT_SELF_CARD_SELECTOR).forEach((card) => {
+    card.querySelectorAll<HTMLElement>(TFT_ICON_IMAGE_SELECTOR).forEach((icon) => icons.push(icon))
+  })
+  return icons
+}
+
+function patchTftSelfAvatar(icon: HTMLElement, avatarUrl: string): boolean {
+  observeTftIcon(icon)
+
+  if (!originalTftIconBackgroundImage.has(icon)) {
+    originalTftIconBackgroundImage.set(icon, icon.style.backgroundImage || null)
+  }
+
+  patchedTftIcons.add(icon)
+
+  const nextBackgroundImage = toCssUrl(avatarUrl)
+  if (icon.style.backgroundImage === nextBackgroundImage) return false
+
+  icon.style.backgroundImage = nextBackgroundImage
+  return true
+}
+
+function restoreTftSelfAvatar(icon: HTMLElement): boolean {
+  if (!patchedTftIcons.has(icon)) return false
+
+  const original = originalTftIconBackgroundImage.get(icon)
+  icon.style.backgroundImage = original ?? ''
+  originalTftIconBackgroundImage.delete(icon)
+  patchedTftIcons.delete(icon)
+  return true
+}
+
 function observeRegaliaAvatarElement(element: Element) {
   if (regaliaElementObservers.has(element)) return
 
@@ -661,6 +719,14 @@ function applyCustomAvatar(): boolean {
     }
   }
 
+  queryTftSelfIcons().forEach((icon) => {
+    if (ownAvatarUrl) {
+      changed = patchTftSelfAvatar(icon, ownAvatarUrl) || changed
+    } else {
+      changed = restoreTftSelfAvatar(icon) || changed
+    }
+  })
+
   queryFriendAvatarCandidates().forEach(({ image, puuid }) => {
     if (!puuid) return
 
@@ -683,7 +749,7 @@ function applyCustomAvatar(): boolean {
     }
   })
 
-  return changed || patchedFriendImages.size > 0 || patchedRegaliaElements.size > 0
+  return changed || patchedFriendImages.size > 0 || patchedTftIcons.size > 0 || patchedRegaliaElements.size > 0
 }
 
 function scheduleApplyCustomAvatar() {
@@ -718,6 +784,11 @@ function restorePatchedAvatars() {
     restoreFriendAvatar(image)
   })
   patchedFriendImages.clear()
+
+  Array.from(patchedTftIcons).forEach((icon) => {
+    restoreTftSelfAvatar(icon)
+  })
+  patchedTftIcons.clear()
 
   Array.from(patchedRegaliaElements).forEach((element) => {
     restoreRegaliaAvatar(element)
@@ -791,6 +862,8 @@ function disableCustomAvatar() {
   }
   friendImageObservers.forEach((observer) => observer.disconnect())
   friendImageObservers.clear()
+  tftIconObservers.forEach((observer) => observer.disconnect())
+  tftIconObservers.clear()
   regaliaElementObservers.forEach((observer) => observer.disconnect())
   regaliaElementObservers.clear()
   regaliaPartyHostObservers.forEach((observer) => observer.disconnect())

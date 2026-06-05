@@ -136,6 +136,7 @@ function ChampionPriorityCards({
 export function ToolsPage() {
   const { t } = useI18n()
   const [autoAccept, setAutoAccept] = useState(store.get('autoAcceptMatch'))
+  const [allowDeclineAfterAccept, setAllowDeclineAfterAccept] = useState(store.get('allowDeclineAfterAccept'))
   // 延迟值在 UI 里用字符串存，避免"删到空 → 变 NaN"、"输到一半"等中间态被推回 store
   const [autoAcceptDelayMin, setAutoAcceptDelayMin] = useState(String(store.get('autoAcceptDelayMin')))
   const [autoAcceptDelayMax, setAutoAcceptDelayMax] = useState(String(store.get('autoAcceptDelayMax')))
@@ -145,6 +146,7 @@ export function ToolsPage() {
   const [benchNoCooldown, setBenchNoCooldown] = useState(store.get('benchNoCooldown'))
   const [hideTFT, setHideTFT] = useState(store.get('hideTFT'))
   const [hideRightNavText, setHideRightNavText] = useState(store.get('hideRightNavText'))
+  const [hideEsportsPopup, setHideEsportsPopup] = useState(store.get('hideEsportsPopup'))
   const [gameModeFilter, setGameModeFilter] = useState(store.get('gameModeFilter'))
   const [windowEffect, setWindowEffect] = useState(store.get('windowEffect'))
   const [champSelectAssist, setChampSelectAssist] = useState(store.get('champSelectAssist'))
@@ -213,6 +215,7 @@ export function ToolsPage() {
   useEffect(() => {
     const unsubs = [
       store.onChange('autoAcceptMatch', setAutoAccept),
+      store.onChange('allowDeclineAfterAccept', setAllowDeclineAfterAccept),
       store.onChange('autoAcceptDelayMin', (v) => setAutoAcceptDelayMin(String(v))),
       store.onChange('autoAcceptDelayMax', (v) => setAutoAcceptDelayMax(String(v))),
       store.onChange('unlockStatus', setUnlockStatus),
@@ -220,6 +223,8 @@ export function ToolsPage() {
       store.onChange('unlockChromas', setUnlockChromas),
       store.onChange('benchNoCooldown', setBenchNoCooldown),
       store.onChange('hideTFT', setHideTFT),
+      store.onChange('hideRightNavText', setHideRightNavText),
+      store.onChange('hideEsportsPopup', setHideEsportsPopup),
       store.onChange('gameModeFilter', setGameModeFilter),
       store.onChange('windowEffect', setWindowEffect),
       store.onChange('champSelectAssist', setChampSelectAssist),
@@ -419,6 +424,15 @@ export function ToolsPage() {
           </SettingCard>
         )}
         <SettingCard
+          title={t('tools.allowDeclineAfterAccept.title')}
+          description={t('tools.allowDeclineAfterAccept.description')}
+        >
+          <SonaSwitch
+            checked={allowDeclineAfterAccept}
+            onChange={(v) => { setAllowDeclineAfterAccept(v); store.set('allowDeclineAfterAccept', v) }}
+          />
+        </SettingCard>
+        <SettingCard
           title={t('tools.benchNoCooldown.title')}
           description={t('tools.benchNoCooldown.description')}
         >
@@ -501,10 +515,10 @@ export function ToolsPage() {
             onChange={(v) => { setBalanceBuffTooltip(v); store.set('balanceBuffTooltip', v) }}
           />
         </SettingCard>
-        {/* 这个选人阶段退出，没找到合适的LCU接口，暂时加不了 */}
+        {/* 秒退的接口用不了 */}
         {/* <SettingCard
-          title="选人阶段退出按钮"
-          description="非自定义对局的英雄选择里客户端不会显示退出按钮，Sona 帮你补一个。点击后会弹确认窗，秒退会扣逃跑分。"
+          title={t('tools.champSelectQuitButton.title')}
+          description={t('tools.champSelectQuitButton.description')}
         >
           <SonaSwitch
             checked={champSelectQuitButton}
@@ -801,6 +815,15 @@ export function ToolsPage() {
           <SonaSwitch
             checked={hideRightNavText}
             onChange={(v) => { setHideRightNavText(v); store.set('hideRightNavText', v) }}
+          />
+        </SettingCard>
+        <SettingCard
+          title={t('tools.hideEsportsPopup.title')}
+          description={t('tools.hideEsportsPopup.description')}
+        >
+          <SonaSwitch
+            checked={hideEsportsPopup}
+            onChange={(v) => { setHideEsportsPopup(v); store.set('hideEsportsPopup', v) }}
           />
         </SettingCard>
         <SettingCard

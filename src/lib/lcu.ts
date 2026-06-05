@@ -542,17 +542,25 @@ class LCUManager {
   /**
    * 秒退英雄选择阶段（dodge ChampSelect）
    *
-   * 走客户端自己的 TeamBuilder 底层退房接口——这是从自定义房间抓包得到的
-   * 真正被客户端调用的端点，比 LCDS 代理（`/lol-login/v1/session/invoke`）更干净：
-   *   - 无需 URL encode args / 构造 LCDS 调用签名
-   *   - 无需 body（纯 POST）
-   *   - 路径本身就清晰表达了语义
+   * 实现：直接 `DELETE /lol-lobby/v2/lobby` 解散/离开当前房间。离开房间会把玩家
+   * 从英雄选择阶段一并拽出，等效于 dodge。
+   *
+   * 为什么不用 `POST /lol-lobby-team-builder/champ-select/v1/session/quit`：
+   *   该端点实测不生效（点了没有任何反应），故弃用。
+   *
+   * 错误处理：
+   *   - 204 No Content：成功
+   *   - 404 Not Found：本就不在房间 / 房间已不存在，按幂等成功处理
    *
    * 注：这会吃逃跑惩罚（降低排位或禁止匹配一段时间），由调用方自行确认场景。
    */
   dodgeChampSelect(): Promise<unknown> {
-    // 纯 POST，无 body
-    return post('/lol-lobby-team-builder/champ-select/v1/session/quit')
+    return del('/lol-lobby/v2/lobby').catch((err: unknown) => {
+      if (err instanceof Error && /→\s*404\b/.test(err.message)) {
+        return undefined
+      }
+      throw err
+    })
   }
 
   // ==================== 匹配 ====================
