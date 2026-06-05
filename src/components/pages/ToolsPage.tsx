@@ -5,7 +5,7 @@ import { SonaInput } from '@/components/ui/SonaInput'
 import { SonaSwitch } from '@/components/ui/SonaSwitch'
 import { SonaSelect } from '@/components/ui/SonaSelect'
 import { MatchHistoryModal } from '@/components/ui/MatchHistoryModal'
-import { searchChampions, getChampionById, type ChampionInfo } from '@/lib/assets'
+import { searchChampions, getChampionById, getPlayableQueues, type ChampionInfo } from '@/lib/assets'
 import { lcu } from '@/lib/lcu'
 import { logger } from '@/index'
 import { store } from '@/lib/store'
@@ -148,6 +148,9 @@ export function ToolsPage() {
   const [hideRightNavText, setHideRightNavText] = useState(store.get('hideRightNavText'))
   const [hideEsportsPopup, setHideEsportsPopup] = useState(store.get('hideEsportsPopup'))
   const [gameModeFilter, setGameModeFilter] = useState(store.get('gameModeFilter'))
+  const [quickLobbyMode, setQuickLobbyMode] = useState(store.get('quickLobbyMode'))
+  const [quickLobbyQueueId, setQuickLobbyQueueId] = useState(store.get('quickLobbyQueueId'))
+  const [quickLobbyQueueOptions, setQuickLobbyQueueOptions] = useState<{ value: string; label: string }[]>([])
   const [windowEffect, setWindowEffect] = useState(store.get('windowEffect'))
   const [champSelectAssist, setChampSelectAssist] = useState(store.get('champSelectAssist'))
   const [opggBuildRecommendation, setOpggBuildRecommendation] = useState(store.get('opggBuildRecommendation'))
@@ -226,6 +229,8 @@ export function ToolsPage() {
       store.onChange('hideRightNavText', setHideRightNavText),
       store.onChange('hideEsportsPopup', setHideEsportsPopup),
       store.onChange('gameModeFilter', setGameModeFilter),
+      store.onChange('quickLobbyMode', setQuickLobbyMode),
+      store.onChange('quickLobbyQueueId', setQuickLobbyQueueId),
       store.onChange('windowEffect', setWindowEffect),
       store.onChange('champSelectAssist', setChampSelectAssist),
       store.onChange('opggBuildRecommendation', setOpggBuildRecommendation),
@@ -256,6 +261,21 @@ export function ToolsPage() {
       store.onChange('rankDivision', setRankDivision),
     ]
     return () => unsubs.forEach((fn) => fn())
+  }, [])
+
+  // 拉取可用队列列表供「快速大厅模式」下拉使用（assets 初始化可能稍晚，未就绪时轮询重试）
+  useEffect(() => {
+    const load = () => {
+      const queues = getPlayableQueues()
+      if (queues.length === 0) return false
+      setQuickLobbyQueueOptions(queues.map((q) => ({ value: String(q.id), label: q.name })))
+      return true
+    }
+    if (load()) return
+    const timer = window.setInterval(() => {
+      if (load()) window.clearInterval(timer)
+    }, 1000)
+    return () => window.clearInterval(timer)
   }, [])
 
   // 点击外部关闭英雄联想下拉
@@ -430,6 +450,21 @@ export function ToolsPage() {
           <SonaSwitch
             checked={allowDeclineAfterAccept}
             onChange={(v) => { setAllowDeclineAfterAccept(v); store.set('allowDeclineAfterAccept', v) }}
+          />
+        </SettingCard>
+        <SettingCard
+          title={t('tools.quickLobby.title')}
+          description={t('tools.quickLobby.description')}
+        >
+          <SonaSelect
+            value={String(quickLobbyQueueId)}
+            onChange={(v) => { const id = Number(v); setQuickLobbyQueueId(id); store.set('quickLobbyQueueId', id) }}
+            options={quickLobbyQueueOptions}
+            placeholder={t('tools.quickLobby.placeholder')}
+          />
+          <SonaSwitch
+            checked={quickLobbyMode}
+            onChange={(v) => { setQuickLobbyMode(v); store.set('quickLobbyMode', v) }}
           />
         </SettingCard>
         <SettingCard

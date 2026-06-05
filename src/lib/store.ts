@@ -194,6 +194,10 @@ export interface SonaConfig {
   autoReturnToLobby: boolean
   /** 自动返回模式: queue=自动排队, lobby=仅返回房间 */
   autoReturnMode: string
+  /** 快速大厅模式：点击 Play 直接进入设置好的目标队列大厅 */
+  quickLobbyMode: boolean
+  /** 快速大厅模式的目标队列 ID */
+  quickLobbyQueueId: number
 }
 
 
@@ -274,6 +278,8 @@ const DEFAULT_CONFIG: SonaConfig = {
   gameAnalysisPopup: false,
   autoReturnToLobby: false,
   autoReturnMode: 'queue',
+  quickLobbyMode: false,
+  quickLobbyQueueId: 430,
 }
 
 

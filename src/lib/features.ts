@@ -37,6 +37,7 @@ import { initSocialSidebarGlass, updateSocialSidebarGlassConfig } from '@/lib/fe
 import { updateBeautifyHomepageBackground, updateBeautifyHomepageBackgroundAdjustments, updateBeautifyHomepageBackgroundGlassConfig } from '@/lib/features/beautify-client/homepage-background'
 import { updateBeautifyWallpaperMode, updateBeautifyWallpaperModeGlassConfig, updateBeautifyWallpaperSceneConfig } from '@/lib/features/beautify-client/wallpaper-mode'
 import { updateGameModeFilter } from '@/lib/features/game-mode-filter'
+import { updateQuickLobbyMode } from '@/lib/features/quick-lobby-mode'
 import { preloadChampSelectTierBadgeData, updateChampSelectTierBadge } from '@/lib/features/champselect-tier-badge'
 import { setAvailabilityHijackEnabled, setHideTFTEnabled, setHideRightNavTextEnabled } from '@/lib/injections'
 import { calculateSonaPlayerStrengthScore, shouldSkipSonaStrengthGame, type SonaPlayerStrengthScore } from '@/lib/player-strength-score'
@@ -925,6 +926,10 @@ export function initFeatures() {
   // 玩家对战模式可见性勾选条
   updateGameModeFilter(store.get('gameModeFilter'))
   store.onChange('gameModeFilter', updateGameModeFilter)
+
+  // 快速大厅模式（点击 Play 直接进目标队列）
+  updateQuickLobbyMode(store.get('quickLobbyMode'))
+  store.onChange('quickLobbyMode', updateQuickLobbyMode)
 
   // 恢复窗口特效
   const savedEffect = store.get('windowEffect')
