@@ -435,6 +435,17 @@ function tryInjectChampSelectTier(): boolean {
 
         // 记录注入引用，离开 ChampSelect 时直接清理
         champSelectInjectedRefs.push({ statsDiv, iconContainer, summonerContainer, playerDetails, clickHandler })
+
+        logger.info(
+          '[ChampSelect] %d楼战绩更新成功 → %s#%s 胜率%s%% (%d胜/%d负) KDA %s',
+          i + 1,
+          stat.gameName ?? '?',
+          stat.tagLine ?? '?',
+          winRate.toFixed(0),
+          stat.wins,
+          stat.total - stat.wins,
+          kdaStr,
+        )
     }
   })
 
