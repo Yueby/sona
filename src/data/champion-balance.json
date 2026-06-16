@@ -2,9 +2,9 @@
   "_meta": {
     "source": "lol-wiki",
     "sourceUrl": "https://wiki.leagueoflegends.com/en-us/Module:ChampionData/data",
-    "updatedAt": "2026-06-07T03:49:59.826Z",
-    "sha1": "6ddad723ad1f248564a096248f3dd10bcb575139",
-    "championCount": 174
+    "updatedAt": "2026-06-10T12:27:07.137Z",
+    "sha1": "9ecb47e0c051d7644d1a7cc27e9e61951d47baa4",
+    "championCount": 175
   },
   "champions": {
     "1": {
@@ -2360,6 +2360,11 @@
     "804": {
       "id": 804,
       "alias": "Yunara",
+      "stats": {}
+    },
+    "805": {
+      "id": 805,
+      "alias": "Locke",
       "stats": {}
     },
     "875": {
