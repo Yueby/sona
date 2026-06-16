@@ -30,12 +30,17 @@ const CLICK_BOUND_ATTR = 'data-sona-readycheck-bound'
 
 type PlayerResponse = ReadyCheck['playerResponse']
 
+/** ReadyCheck 阶段内的轮询间隔（ReadyCheck 仅 ~15s，轮询不会过久） */
+const POLL_INTERVAL_MS = 300
+
 /** 当前玩家在本次 ReadyCheck 的响应，决定解禁哪个按钮 */
 let currentResponse: PlayerResponse = 'None'
 /** gameflow 阶段订阅（离开 ReadyCheck 时清理） */
 let phaseUnsub: (() => void) | null = null
-/** ready-check 状态订阅（事件驱动：更新 playerResponse 并解禁） */
+/** ready-check 状态订阅（WS 快速通道：更新 playerResponse 并解禁） */
 let readyCheckUnsub: (() => void) | null = null
+/** ReadyCheck 阶段内的轮询定时器（兜底：首次冷启动 WS 订阅不生效时仍能工作） */
+let pollTimer: ReturnType<typeof setInterval> | null = null
 
 // ==================== 定向解禁 ====================
 
@@ -80,9 +85,12 @@ function applyUnlock() {
   if (!container) return
 
   if (currentResponse === 'Accepted') {
-    unlockButton(container, 'decline')
+    const removed = unlockButton(container, 'decline')
+    // 仅在真正移除时打日志，避免轮询每 300ms 刷屏
+    if (removed > 0) logger.info('[ReadyCheckControl] 已接受 → 解禁拒绝按钮，移除禁用标记 %d 处', removed)
   } else if (currentResponse === 'Declined') {
-    unlockButton(container, 'accept')
+    const removed = unlockButton(container, 'accept')
+    if (removed > 0) logger.info('[ReadyCheckControl] 已拒绝 → 解禁接受按钮，移除禁用标记 %d 处', removed)
   }
 }
 
@@ -140,8 +148,47 @@ function ensureClickHandlers() {
   bindClickHandlers(container)
 }
 
-/** 离开 ReadyCheck（进入 ChampSelect 等）时清理：解绑点击、重置状态 */
+/**
+ * 按最新玩家响应刷新：更新状态 + 接管点击 + 定向解禁。
+ * WS 事件与轮询共用此入口。
+ */
+function refreshFromResponse(next: PlayerResponse) {
+  if (next !== currentResponse) {
+    currentResponse = next
+    logger.info('[ReadyCheckControl] 玩家响应状态变化 → %s', currentResponse)
+  }
+  ensureClickHandlers()
+  applyUnlock()
+}
+
+/** 轮询一次 ready-check 状态（REST，HTTP 请求不受 WS 订阅时机影响，冷启动也可用） */
+async function pollReadyCheckOnce() {
+  try {
+    const rc = await lcu.getReadyCheck()
+    refreshFromResponse(rc?.playerResponse ?? 'None')
+  } catch {
+    // ReadyCheck 不存在（如刚离开）等错误忽略
+  }
+}
+
+/** 进入 ReadyCheck：启动轮询（兜底首次冷启动 WS 订阅不生效的情况） */
+function startPolling() {
+  if (pollTimer) return
+  logger.info('[ReadyCheckControl] 进入 ReadyCheck，启动轮询解禁（每 %dms 一次）', POLL_INTERVAL_MS)
+  void pollReadyCheckOnce()
+  pollTimer = setInterval(() => void pollReadyCheckOnce(), POLL_INTERVAL_MS)
+}
+
+function stopPolling() {
+  if (pollTimer) {
+    clearInterval(pollTimer)
+    pollTimer = null
+  }
+}
+
+/** 离开 ReadyCheck（进入 ChampSelect 等）时清理：停轮询、解绑点击、重置状态 */
 function cleanup() {
+  stopPolling()
   unbindClickHandlers()
   currentResponse = 'None'
 }
@@ -151,31 +198,34 @@ function cleanup() {
 let registered = false
 
 export function updateAllowDeclineAfterAccept(enabled: boolean) {
+  logger.info('[ReadyCheckControl] updateAllowDeclineAfterAccept 调用 → enabled=%s, registered=%s', enabled, registered)
   if (enabled && !registered) {
     registered = true
     currentResponse = 'None'
 
-    // ready-check 状态事件（15s 内每秒推送）：纯事件驱动，更新响应 + 解禁 + 接管点击
+    // WS 快速通道：READY_CHECK 事件可用时（热重启后）即时解禁，更灵敏
     readyCheckUnsub = lcu.observe(LcuEventUri.READY_CHECK, (event: LCUEventMessage) => {
       const rc = event.data as ReadyCheck | null
-      const next = rc?.playerResponse ?? 'None'
-      if (next !== currentResponse) {
-        currentResponse = next
-        logger.info('[ReadyCheckControl] 玩家响应状态变化 → %s', currentResponse)
-      }
-      ensureClickHandlers()
-      applyUnlock()
+      refreshFromResponse(rc?.playerResponse ?? 'None')
     })
 
-    // gameflow 阶段：正式进入 ChampSelect 等（离开 ReadyCheck）即清理
+    // 可靠驱动：gameflow 阶段（冷启动也稳）。进入 ReadyCheck 启动轮询，离开即清理
     phaseUnsub = lcu.observe(LcuEventUri.GAMEFLOW_PHASE_CHANGE, (event: LCUEventMessage) => {
       const phase = event.data as GameflowPhase
-      if (phase !== 'ReadyCheck') {
+      logger.info('[ReadyCheckControl] gameflow 阶段变化 → %s', phase)
+      if (phase === 'ReadyCheck') {
+        startPolling()
+      } else {
         cleanup()
       }
     })
 
-    logger.info('Allow decline after accept enabled ✓')
+    // 插件启用时可能已处于 ReadyCheck（热重启场景），立即补一次
+    lcu.getGameflowPhase().then((phase) => {
+      if (phase === 'ReadyCheck') startPolling()
+    }).catch(() => { /* ignore */ })
+
+    logger.info('[ReadyCheckControl] Allow decline after accept enabled ✓')
   } else if (!enabled && registered) {
     registered = false
     if (phaseUnsub) {
@@ -187,6 +237,6 @@ export function updateAllowDeclineAfterAccept(enabled: boolean) {
       readyCheckUnsub = null
     }
     cleanup()
-    logger.info('Allow decline after accept disabled')
+    logger.info('[ReadyCheckControl] Allow decline after accept disabled')
   }
 }

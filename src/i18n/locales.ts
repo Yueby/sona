@@ -87,7 +87,7 @@ export const zhCN = {
   'tools.autoAcceptDelay.title': '自动接受的随机延迟',
   'tools.autoAcceptDelay.description': '在区间内随机延迟后再接受（上限 15000ms）。',
   'tools.allowDeclineAfterAccept.title': '允许接受后再拒绝',
-  'tools.allowDeclineAfterAccept.description': '接受对局后保持拒绝按钮可点，让你能随时反悔；接受/拒绝始终可自由切换。',
+  'tools.allowDeclineAfterAccept.description': '接受对局后保持拒绝按钮可点，让你能随时反悔；接受/拒绝始终可自由切换。(拒绝按钮灰色，但可以点击)',
   'tools.benchNoCooldown.title': '大乱斗无CD换英雄',
   'tools.benchNoCooldown.description': '移除共享池英雄的切换冷却限制，随时换取心仪英雄。',
   'tools.analyzeTeamPower.title': '分析友方战力',
