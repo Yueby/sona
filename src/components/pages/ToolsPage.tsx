@@ -173,6 +173,7 @@ export function ToolsPage() {
   const [lobbyEnhancementFetchCount, setLobbyEnhancementFetchCount] = useState(store.get('lobbyEnhancementFetchCount'))
   const [customProfileBg, setCustomProfileBg] = useState(store.get('customProfileBg'))
   const [customBanner, setCustomBanner] = useState(store.get('customBanner'))
+  const [isRemovingCrest, setIsRemovingCrest] = useState(false)
   const [rankQueue, setRankQueue] = useState(store.get('rankQueue'))
   const [rankTier, setRankTier] = useState(store.get('rankTier'))
   const [rankDivision, setRankDivision] = useState(store.get('rankDivision'))
@@ -366,6 +367,25 @@ export function ToolsPage() {
     const next = autoBanChampionIds.filter((id) => id !== championId)
     setAutoBanChampionIds(next)
     store.set('autoBanChampionIds', next)
+  }
+
+  const handleRemoveCrest = async () => {
+    if (isRemovingCrest) return
+
+    try {
+      setIsRemovingCrest(true)
+      const current = await lcu.getRegalia()
+      await lcu.updateRegalia({
+        preferredCrestType: 'prestige',
+        preferredBannerType: current.bannerType,
+        selectedPrestigeCrest: 22,
+      })
+      logger.info('头像边框已卸下 ✓')
+    } catch (err) {
+      logger.error('卸下头像边框失败:', err)
+    } finally {
+      setIsRemovingCrest(false)
+    }
   }
 
   return (
@@ -742,24 +762,7 @@ export function ToolsPage() {
           title={t('tools.removeCrest.title')}
           description={t('tools.removeCrest.description')}
         >
-          <SonaButton onClick={async () => {
-            try {
-              // 先读取当前 regalia，沿用现有 bannerType；selectedPrestigeCrest 固定为 22（无边框），与 Akari/Seraphine 一致。
-              const current = await lcu.getRegalia()
-              await fetch('/lol-regalia/v2/current-summoner/regalia', {
-                method: 'PUT',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                  preferredCrestType: 'prestige',
-                  preferredBannerType: current.bannerType,
-                  selectedPrestigeCrest: 22,
-                }),
-              })
-              logger.info('头像边框已卸下 ✓')
-            } catch (err) {
-              logger.error('卸下头像边框失败:', err)
-            }
-          }}>
+          <SonaButton onClick={handleRemoveCrest} disabled={isRemovingCrest}>
             {t('tools.unequip')}
           </SonaButton>
         </SettingCard>

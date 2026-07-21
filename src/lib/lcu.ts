@@ -207,6 +207,12 @@ export interface RegaliaInfo {
   summonerLevel: number
 }
 
+export interface RegaliaUpdatePayload {
+  preferredCrestType: string
+  preferredBannerType: string
+  selectedPrestigeCrest: number
+}
+
 export interface ChallengePlayerPreferencesPayload {
   bannerAccent?: string
   challengeIds?: Array<string | number>
@@ -1648,6 +1654,11 @@ class LCUManager {
   /** 获取当前召唤师的 Regalia 装饰配置 */
   getRegalia(): Promise<RegaliaInfo> {
     return get<RegaliaInfo>('/lol-regalia/v2/current-summoner/regalia')
+  }
+
+  /** 更新当前召唤师的 Regalia 装饰配置 */
+  updateRegalia(payload: RegaliaUpdatePayload): Promise<void> {
+    return put<void>('/lol-regalia/v2/current-summoner/regalia', payload)
   }
 
   /** 更新挑战身份偏好，例如展示旗帜、挑战 token 等 */
